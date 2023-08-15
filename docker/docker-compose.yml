@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+    mosquitto:
+        container_name: mosquitto
+        image: eclipse-mosquitto:2
+        restart: unless-stopped
+        ports:
+            - 1883:1883
+            - 8883:8883
+            - 9001:9001
+        volumes:
+            - ./mosquitto/config:/mosquitto/config
+            - ./mosquitto/data:/mosquitto/data
+        networks:
+            - smarthome
+    zigbee2mqtt:
+        container_name: zigbee2mqtt
+        image: koenkk/zigbee2mqtt
+        restart: unless-stopped
+        volumes:
+            - ./zigbee2mqtt/data:/app/data
+            - /run/udev:/run/udev:ro
+        ports:
+            - 8080:8080
+        environment:
+            - TZ=Europe/Berlin
+        devices:
+            - /dev/serial/by-id/usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II_DE2253799-if00:/dev/ttyACM0
+        networks:
+            - smarthome
+networks:
+    smarthome:
+        name: smarthome
+        driver: bridge

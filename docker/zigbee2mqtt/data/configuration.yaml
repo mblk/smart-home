@@ -1,0 +1,35 @@
+frontend: true
+homeassistant: false
+permit_join: true
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mosquitto
+serial:
+  port: /dev/ttyACM0
+  adapter: deconz
+availability: true
+advanced:
+  log_level: info
+  pan_id: 1879
+  ext_pan_id:
+    - 221
+    - 221
+    - 221
+    - 221
+    - 221
+    - 221
+    - 221
+    - 221
+  channel: 20
+  network_key: '!secrets.yaml network_key'
+devices:
+  '0x00158d000548a580':
+    friendly_name: dev/vibration_01
+  '0x00158d000548a3a2':
+    friendly_name: dev/temp_01
+  '0x00158d000353afa2':
+    friendly_name: dev/contact_01
+  '0x00178801086618e8':
+    friendly_name: dev/motion_01
+  '0x00124b00210c0cbf':
+    friendly_name: dev/led_01
