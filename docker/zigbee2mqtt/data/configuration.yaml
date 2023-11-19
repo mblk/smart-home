@@ -24,12 +24,20 @@ advanced:
   network_key: '!secrets.yaml network_key'
 devices:
   '0x00158d000548a580':
-    friendly_name: dev/vibration_01
+    friendly_name: dev/testing/vibration-1
   '0x00158d000548a3a2':
-    friendly_name: dev/temp_01
+    friendly_name: dev/testing/temp-1
   '0x00158d000353afa2':
-    friendly_name: dev/contact_01
+    friendly_name: dev/testing/contact-1
   '0x00178801086618e8':
-    friendly_name: dev/motion_01
+    friendly_name: dev/testing/motion-1
   '0x00124b00210c0cbf':
-    friendly_name: dev/led_01
+    friendly_name: dev/livingroom/light/tv-1
+  '0xf0d1b80000106f5f':
+    friendly_name: dev/livingroom/light/desk-1
+  '0x84182600000f4a93':
+    friendly_name: dev/livingroom/light/ceiling-1
+  '0x84182600000f462a':
+    friendly_name: dev/livingroom/light/ceiling-2
+  '0x84182600000f4d47':
+    friendly_name: dev/livingroom/light/ceiling-3
