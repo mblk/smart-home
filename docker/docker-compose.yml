@@ -29,6 +29,12 @@ services:
             - /dev/serial/by-id/usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II_DE2253799-if00:/dev/ttyACM0
         networks:
             - smarthome
+    smarthome.service:
+        container_name: smarthome.service
+        image: smarthome.service
+        restart: unless-stopped
+        networks:
+            - smarthome
 networks:
     smarthome:
         name: smarthome
