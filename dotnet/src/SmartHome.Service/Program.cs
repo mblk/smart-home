@@ -1,4 +1,5 @@
 using SmartHome.Service;
+using SmartHome.Service.Logic;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>

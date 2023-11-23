@@ -35,6 +35,9 @@ services:
         restart: unless-stopped
         networks:
             - smarthome
+        build:
+            context: .
+            dockerfile: ../dotnet/src/SmartHome.Service/Dockerfile
 networks:
     smarthome:
         name: smarthome

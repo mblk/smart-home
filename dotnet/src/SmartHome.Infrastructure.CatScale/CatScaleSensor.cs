@@ -3,25 +3,30 @@ using System.Net.Http.Json;
 
 namespace SmartHome.Infrastructure.CatScale;
 
+public record CatScaleConfig(Uri Endpoint);
+
 public class CatScaleSensor : IDisposable
 {
+    // ReSharper disable once ClassNeverInstantiated.Local
     private record PooCount
     (
         int ToiletId,
         int Count
     );
-
+    
+    private readonly CatScaleConfig _config;
     private readonly CancellationTokenSource _cts = new();
     private readonly HttpClient _httpClient;
 
     public event Action<int>? PooCountChanged;
 
-    public CatScaleSensor(Uri endpoint)
+    public CatScaleSensor(CatScaleConfig config)
     {
+        _config = config;
         _httpClient = new HttpClient()
         {
             Timeout = TimeSpan.FromMinutes(5),
-            BaseAddress = endpoint,
+            BaseAddress = config.Endpoint,
         };
     }
 
