@@ -30,7 +30,7 @@ devices:
   '0x00158d000353afa2':
     friendly_name: dev/testing/contact-1
   '0x00178801086618e8':
-    friendly_name: dev/testing/motion-1
+    friendly_name: dev/kitchen/occupancy-1
   '0x00124b00210c0cbf':
     friendly_name: dev/livingroom/light/tv-1
   '0xf0d1b80000106f5f':
@@ -41,3 +41,27 @@ devices:
     friendly_name: dev/livingroom/light/ceiling-2
   '0x84182600000f4d47':
     friendly_name: dev/livingroom/light/ceiling-3
+  '0x04cf8cdf3c793a64':
+    friendly_name: dev/kitchen/button-1
+  '0x00158d00053d2dea':
+    friendly_name: dev/livingroom/thermostat
+    legacy: true
+    thermostat_unit: celsius
+  '0x00158d00032f623f':
+    friendly_name: dev/bedroom/thermostat
+  '0x04cf8cdf3c793a27':
+    friendly_name: dev/bedroom/button-1
+  '0x84182600000f5617':
+    friendly_name: dev/livingroom/light/standing-1
+  '0x84182600000f4c23':
+    friendly_name: dev/bedroom/light/stand-1
+  '0x84182600000f5065':
+    friendly_name: dev/bedroom/light/stand-2
+  '0x00158d0002fdd716':
+    friendly_name: dev/kitchen/light/ceiling-1
+  '0x00158d000327cbbb':
+    friendly_name: dev/kitchen/light/ceiling-2
+  '0x00158d000327b3c1':
+    friendly_name: dev/kitchen/light/ceiling-3
+  '0x00158d0002fdc287':
+    friendly_name: dev/kitchen/light/ceiling-4
