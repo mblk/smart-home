@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-SmartHome.Service-1fc3f0b3-4b7f-40fd-ac5d-e0db6bfad15a</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,5 +15,11 @@
   <ItemGroup>
     <ProjectReference Include="..\SmartHome.Infrastructure.CatScale\SmartHome.Infrastructure.CatScale.csproj" />
     <ProjectReference Include="..\SmartHome.Infrastructure.Zigbee2Mqtt\SmartHome.Infrastructure.Zigbee2Mqtt.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\.dockerignore">
+      <Link>.dockerignore</Link>
+    </Content>
   </ItemGroup>
 </Project>
