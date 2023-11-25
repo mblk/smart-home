@@ -45,7 +45,7 @@ devices:
     friendly_name: dev/kitchen/button-1
   '0x00158d00053d2dea':
     friendly_name: dev/livingroom/thermostat
-    legacy: true
+    legacy: false
     thermostat_unit: celsius
   '0x00158d00032f623f':
     friendly_name: dev/bedroom/thermostat

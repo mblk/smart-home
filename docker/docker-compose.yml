@@ -12,6 +12,7 @@ services:
         volumes:
             - ./mosquitto/config:/mosquitto/config
             - ./mosquitto/data:/mosquitto/data
+            - ./mosquitto/log:/mosquitto/log
         networks:
             - smarthome
     zigbee2mqtt:
@@ -33,6 +34,10 @@ services:
         container_name: smarthome.service
         image: smarthome.service
         restart: unless-stopped
+        environment:
+            - Z2M__Server=mosquitto
+            - Z2M__Port=1883
+            - CatScale__Endpoint=https://mblk.info
         networks:
             - smarthome
         build:
