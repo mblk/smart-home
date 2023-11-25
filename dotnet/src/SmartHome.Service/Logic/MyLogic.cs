@@ -14,10 +14,21 @@ public class MyLogic : IDisposable
     private readonly ILogger<MyLogic> _logger;
     private readonly CancellationTokenSource _cts = new();
 
-    public MyLogic(ILogger<MyLogic> logger)
+    private readonly Z2MConfig _z2MConfig;
+    private readonly CatScaleConfig _catScaleConfig;
+
+    public MyLogic(ILogger<MyLogic> logger, IConfiguration configuration)
     {
         _logger = logger;
         _logger.LogInformation("ctor");
+
+        _z2MConfig = configuration.GetSection("Z2M").Get<Z2MConfig>()
+                     ?? throw new Exception("Can't get z2m config");
+        _catScaleConfig = configuration.GetSection("CatScale").Get<CatScaleConfig>()
+                          ?? throw new Exception("Cant get cat-scale config");
+
+        _logger.LogInformation("Z2M config: {Server} {Port}", _z2MConfig.Server, _z2MConfig.Port);
+        _logger.LogInformation("Cat-scale config: {Endpoint}", _catScaleConfig.Endpoint);
 
         _ = Task.Run(Worker);
     }
@@ -30,7 +41,12 @@ public class MyLogic : IDisposable
 
     private async Task Worker()
     {
-        var configuration = CreateConfiguration();
+        var configuration = new Configuration
+        {
+            Z2MConfig = _z2MConfig,
+            CatScaleConfig = _catScaleConfig,
+        };
+
         var devices = await CreateDevices(configuration);
         var state = CreateState();
 
@@ -98,7 +114,7 @@ public class MyLogic : IDisposable
                         {
                             IncludeFields = true,
                         });
-                        
+
                         Console.WriteLine($"State changed: {stateJson}");
                         eventQueue.Add(new StateChangedEvent());
                     }
@@ -180,11 +196,12 @@ public class MyLogic : IDisposable
             case "kitchen":
                 state.KitchenOccupied = e.Occupancy;
                 break;
-            
+
             default:
                 Console.WriteLine($"Invalid occupancy sensor: {e.Sensor}");
                 break;
         }
+
         return state;
     }
 
@@ -274,15 +291,6 @@ public class MyLogic : IDisposable
             await devices.Bedroom.StandLight1.TurnOff();
             await devices.Bedroom.StandLight2.TurnOff();
         }
-    }
-
-    private static Configuration CreateConfiguration()
-    {
-        return new Configuration
-        {
-            CatScaleConfig = new CatScaleConfig(new Uri("https://mblk.info")),
-            Z2MConfig = new Z2MConfig("media", 1883),
-        };
     }
 
     private static State CreateState()
