@@ -51,7 +51,6 @@ public class MyLogic : IDisposable
         var state = CreateState();
 
         var eventQueue = new BlockingCollection<LogicEvent>();
-        eventQueue.Add(new StateChangedEvent());
 
         _ = Task.Run(async () =>
         {
@@ -100,26 +99,25 @@ public class MyLogic : IDisposable
                         case OccupancySensorEvent occupancySensorEvent:
                             state = ProcessOccupancySensorEvent(state, occupancySensorEvent);
                             break;
-
-                        case StateChangedEvent:
-                            await UpdateLivingRoomLights(state, devices);
-                            await UpdateKitchenLights(state, devices);
-                            await UpdateBedroomLights(state, devices);
-                            break;
                     }
 
-                    if (!oldState.Equals(state) && @event is not StateChangedEvent)
+                    if (!oldState.Equals(state))
                     {
                         var stateJson = JsonSerializer.Serialize(state, new JsonSerializerOptions()
                         {
                             IncludeFields = true,
                         });
-
                         Console.WriteLine($"State changed: {stateJson}");
-                        eventQueue.Add(new StateChangedEvent());
+
+                        await UpdateLivingRoomLights(state, devices);
+                        await UpdateKitchenLights(state, devices);
+                        await UpdateBedroomLights(state, devices);
                     }
 
-                    Console.WriteLine($"Processed event {@event} in {sw.ElapsedMilliseconds} ms");
+                    if (@event is not TimerTickEvent)
+                    {
+                        Console.WriteLine($"Processed event {@event} in {sw.ElapsedMilliseconds} ms");
+                    }
                 }
             }
             catch (OperationCanceledException)

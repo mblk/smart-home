@@ -2,8 +2,6 @@ namespace SmartHome.Service.Logic;
 
 public abstract record LogicEvent;
 
-public record StateChangedEvent : LogicEvent;
-
 public record TimerTickEvent : LogicEvent;
 
 public record PooCountChangedEvent(int PooCount) : LogicEvent;
