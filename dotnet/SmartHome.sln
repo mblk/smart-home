@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 #
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FB499442-8AFF-415C-AC77-66F2B37107DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHome.ConsoleTests", "src\SmartHome.ConsoleTests\SmartHome.ConsoleTests.csproj", "{6B9893F5-A179-462A-BC9D-FD87842A18B3}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHome.Domain", "src\SmartHome.Domain\SmartHome.Domain.csproj", "{062B764B-61B3-481B-919B-B30F13750BB2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHome.Service", "src\SmartHome.Service\SmartHome.Service.csproj", "{F92FCAA2-37CC-495B-A88A-C832C9D19239}"
