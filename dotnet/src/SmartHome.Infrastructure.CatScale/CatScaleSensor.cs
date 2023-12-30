@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace SmartHome.Infrastructure.CatScale;
 
-public record CatScaleConfig(Uri Endpoint);
-
-public class CatScaleSensor : IDisposable
+public class CatScaleSensor : ICatScaleSensor
 {
     // ReSharper disable once ClassNeverInstantiated.Local
     private record PooCount
@@ -13,20 +13,27 @@ public class CatScaleSensor : IDisposable
         int ToiletId,
         int Count
     );
-    
+
     private readonly CatScaleConfig _config;
+    private readonly ILogger<CatScaleSensor> _logger;
     private readonly CancellationTokenSource _cts = new();
     private readonly HttpClient _httpClient;
 
-    public event Action<int>? PooCountChanged;
+    public event PooCountChangedEventHandler? PooCountChanged;
 
-    public CatScaleSensor(CatScaleConfig config)
+    public CatScaleSensor(ILogger<CatScaleSensor> logger, IConfiguration configuration)
     {
-        _config = config;
-        _httpClient = new HttpClient()
+        _logger = logger;
+        
+        _config = configuration.GetRequiredSection("CatScale").Get<CatScaleConfig>()
+                  ?? throw new Exception("Cant get cat-scale config");
+        
+        _logger.LogInformation("CatScaleSensor created, config: {Config}", _config);
+
+        _httpClient = new HttpClient
         {
-            Timeout = TimeSpan.FromMinutes(5),
-            BaseAddress = config.Endpoint,
+            Timeout = TimeSpan.FromMinutes(15), // TODO move to config?
+            BaseAddress = _config.Endpoint,
         };
     }
 
@@ -63,19 +70,19 @@ public class CatScaleSensor : IDisposable
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("CatScaleSensor: Canceled");
+                _logger.LogDebug("Canceled");
             }
             catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.GatewayTimeout)
             {
-                Console.WriteLine("CatScaleSensor: Gateway Time-out");
+                _logger.LogInformation("Gateway Time-Out");
             }
             catch (IOException e) when (e.Message == "The response ended prematurely.")
             {
-                Console.WriteLine("CatScaleSensor: The response ended prematurely.");
+                _logger.LogInformation("The response ended prematurely");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"CatScaleSensor: {e}");
+                _logger.LogError(e, "Failed to subscribe");
             }
         }
     }
@@ -92,11 +99,11 @@ public class CatScaleSensor : IDisposable
     {
         try
         {
-            PooCountChanged?.Invoke(count);
+            PooCountChanged?.Invoke(this, new PooCountChangedEventArgs(count));
         }
         catch (Exception e)
         {
-            Console.WriteLine($"InvokePooCountChanged: {e}");
+            _logger.LogError(e, "Failed to invoke event");
         }
     }
 }

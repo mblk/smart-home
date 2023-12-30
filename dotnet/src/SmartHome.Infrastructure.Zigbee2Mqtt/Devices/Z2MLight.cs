@@ -1,15 +1,13 @@
-﻿using System.ComponentModel;
-using System.Text.Json;
+﻿using System.Text.Json;
+using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
 
 namespace SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 
-
-
 public class Z2MLight : Z2MDevice, IZ2MLight
 {
-    public Z2MLight(Z2MConfig config, Z2MDiscoveryDevice device)
-        : base(config, device)
+    public Z2MLight(Z2MDiscoveryDevice device, IMqttConnector mqttConnector)
+        : base(device, mqttConnector)
     {
     }
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
 
 namespace SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
@@ -7,8 +8,8 @@ public class Z2MOccupancySensor : Z2MDevice, IZ2MOccupancySensor
 {
     public event Z2MOccupancySensorEventHandler? Event;
 
-    public Z2MOccupancySensor(Z2MConfig config, Z2MDiscoveryDevice device)
-        : base(config, device)
+    public Z2MOccupancySensor(Z2MDiscoveryDevice device, IMqttConnector mqttConnector)
+        : base(device, mqttConnector)
     {
         _ = Task.Run(Worker);
     }

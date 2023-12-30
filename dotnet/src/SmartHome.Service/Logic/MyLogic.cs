@@ -1,69 +1,76 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Text.Json;
-using SmartHome.Infrastructure.CatScale;
-using SmartHome.Infrastructure.Zigbee2Mqtt;
-using SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
-using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
 using SmartHome.Utils;
 
 namespace SmartHome.Service.Logic;
 
-public class MyLogic : IDisposable
+public class MyLogic : IAsyncDisposable
 {
     private readonly ILogger<MyLogic> _logger;
+    private readonly IServiceProvider _serviceProvider;
     private readonly CancellationTokenSource _cts = new();
 
-    private readonly Z2MConfig _z2MConfig;
-    private readonly CatScaleConfig _catScaleConfig;
+    private Task? _timerTask;
+    private Task? _eventLoopTask;
 
-    public MyLogic(ILogger<MyLogic> logger, IConfiguration configuration)
+    public MyLogic(ILogger<MyLogic> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _logger.LogInformation("ctor");
-
-        _z2MConfig = configuration.GetSection("Z2M").Get<Z2MConfig>()
-                     ?? throw new Exception("Can't get z2m config");
-        _catScaleConfig = configuration.GetSection("CatScale").Get<CatScaleConfig>()
-                          ?? throw new Exception("Cant get cat-scale config");
-
-        _logger.LogInformation("Z2M config: {Server} {Port}", _z2MConfig.Server, _z2MConfig.Port);
-        _logger.LogInformation("Cat-scale config: {Endpoint}", _catScaleConfig.Endpoint);
-
-        _ = Task.Run(Worker);
+        _serviceProvider = serviceProvider;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _logger.LogInformation("Dispose");
-        _cts.Cancel();
-    }
+        // @formatter:off
+        try { _cts.Cancel(); }
+        catch (Exception e) { _logger.LogError(e, "Failed to cancel"); }
 
-    private async Task Worker()
-    {
-        var configuration = new Configuration
+        var timerTask = _timerTask;
+        if (timerTask != null)
         {
-            Z2MConfig = _z2MConfig,
-            CatScaleConfig = _catScaleConfig,
-        };
+            try { await timerTask; }
+            catch (Exception e) { _logger.LogError(e, "Failed to await timer-task"); }
+        }
 
-        var devices = await CreateDevices(configuration);
-        var state = CreateState();
+        var eventLoopTask = _eventLoopTask;
+        if (eventLoopTask != null)
+        {
+            try { await eventLoopTask; }
+            catch (Exception e) { _logger.LogError(e, "Failed to await event-loop-task"); }
+        }
+        // @formatter:on
+    }
+
+    public async Task Start(CancellationToken startingCancellationToken = default)
+    {
+        var devices = await DeviceFactory.CreateDevices(_serviceProvider);
 
         var eventQueue = new BlockingCollection<LogicEvent>();
+        RegisterEvents(devices, eventQueue);
 
-        _ = Task.Run(async () =>
-        {
-            while (!_cts.IsCancellationRequested)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(1000), _cts.Token);
-                eventQueue.Add(new TimerTickEvent());
-            }
-        });
-
-        devices.Bathroom.CatScale.PooCountChanged += pooCount
-            => eventQueue.Add(new PooCountChangedEvent(pooCount));
         devices.Bathroom.CatScale.Start();
+
+        // @formatter:off
+        _timerTask = Task.Run(async () =>
+            {
+                try { await TimerTaskFunc(eventQueue, _cts.Token); }
+                catch (Exception e) { _logger.LogError(e, "Unhandled error"); }
+            },
+            _cts.Token);
+
+        _eventLoopTask = Task.Run(async () =>
+            {
+                try { await EventLoopTaskFunc(eventQueue, devices, _logger, _cts.Token); }
+                catch (Exception e) { _logger.LogCritical(e, "Unhandled error"); }
+            },
+            _cts.Token);
+        // @formatter:on
+    }
+
+    private static void RegisterEvents(Devices devices, BlockingCollection<LogicEvent> eventQueue)
+    {
+        devices.Bathroom.CatScale.PooCountChanged += (_, e)
+            => eventQueue.Add(new PooCountChangedEvent(e.PooCount));
 
         devices.Kitchen.Button1.Event += (_, e)
             => eventQueue.Add(new ButtonPressEvent("kitchen", e.Action));
@@ -73,59 +80,117 @@ public class MyLogic : IDisposable
         devices.Kitchen.OccupancySensor1.Event += (_, e)
             => eventQueue.Add(new OccupancySensorEvent("kitchen", e.Occupancy));
 
-        while (!_cts.IsCancellationRequested)
+        devices.Virtual.LivingRoomLightMode.ChangeRequest += x
+            => eventQueue.Add(new ChangeLivingRoomLightMode(x));
+        devices.Virtual.KitchenLightMode.ChangeRequest += x
+            => eventQueue.Add(new ChangeKitchenLightMode(x));
+        devices.Virtual.BedroomLightMode.ChangeRequest += x
+            => eventQueue.Add(new ChangeBedroomLightMode(x));
+    }
+
+    private static async Task TimerTaskFunc(BlockingCollection<LogicEvent> eventQueue,
+        CancellationToken cancellationToken)
+    {
+        try
         {
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
-                foreach (var @event in eventQueue.GetConsumingEnumerable(_cts.Token))
-                {
-                    var sw = Stopwatch.StartNew();
-                    var oldState = state;
-
-                    switch (@event)
-                    {
-                        case TimerTickEvent timerTickEvent:
-                            state = ProcessTimerTickEvent(state, timerTickEvent);
-                            break;
-
-                        case PooCountChangedEvent pooCountChangedEvent:
-                            state = ProcessPooCountChangedEvent(state, pooCountChangedEvent);
-                            break;
-
-                        case ButtonPressEvent buttonPressEvent:
-                            state = ProcessButtonEvent(state, buttonPressEvent);
-                            break;
-
-                        case OccupancySensorEvent occupancySensorEvent:
-                            state = ProcessOccupancySensorEvent(state, occupancySensorEvent);
-                            break;
-                    }
-
-                    if (!oldState.Equals(state))
-                    {
-                        var stateJson = JsonSerializer.Serialize(state, new JsonSerializerOptions()
-                        {
-                            IncludeFields = true,
-                        });
-                        Console.WriteLine($"State changed: {stateJson}");
-
-                        await UpdateLivingRoomLights(state, devices);
-                        await UpdateKitchenLights(state, devices);
-                        await UpdateBedroomLights(state, devices);
-                    }
-
-                    if (@event is not TimerTickEvent)
-                    {
-                        Console.WriteLine($"Processed event {@event} in {sw.ElapsedMilliseconds} ms");
-                    }
-                }
+                await Task.Delay(TimeSpan.FromMilliseconds(1000), cancellationToken);
+                eventQueue.Add(new TimerTickEvent(), cancellationToken);
             }
-            catch (OperationCanceledException)
-            {
-            }
+        }
+        catch (TaskCanceledException)
+        {
         }
     }
 
+    private static async Task EventLoopTaskFunc(BlockingCollection<LogicEvent> eventQueue, Devices devices,
+        ILogger logger, CancellationToken cancellationToken)
+    {
+        var state = CreateState();
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                foreach (var @event in eventQueue.GetConsumingEnumerable(cancellationToken))
+                {
+                    try
+                    {
+                        var sw = Stopwatch.StartNew();
+                        var oldState = state;
+                        var newState = ProcessEvent(oldState, @event);
+
+                        if (!oldState.Equals(newState))
+                        {
+                            oldState.PrintDiffTo(newState, "state");
+                            state = newState;
+                            await ProcessChangedState(state, devices);
+                        }
+
+                        if (@event is not TimerTickEvent)
+                        {
+                            logger.LogDebug("Processed event {Event} in {Time} ms", @event,
+                                sw.ElapsedMilliseconds);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e, "Failed to process event {Event}", @event);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private static State CreateState()
+    {
+        return new State
+        {
+            LivingRoomLightMode = LivingRoomLightMode.Off,
+            KitchenLightMode = KitchenLightMode.Auto,
+            BedroomLightMode = BedroomLightMode.Off,
+        };
+    }
+
+    private static State ProcessEvent(State state, LogicEvent @event)
+    {
+        switch (@event)
+        {
+            case TimerTickEvent timerTickEvent:
+                return ProcessTimerTickEvent(state, timerTickEvent);
+
+            case PooCountChangedEvent pooCountChangedEvent:
+                return ProcessPooCountChangedEvent(state, pooCountChangedEvent);
+
+            case ButtonPressEvent buttonPressEvent:
+                return ProcessButtonEvent(state, buttonPressEvent);
+
+            case OccupancySensorEvent occupancySensorEvent:
+                return ProcessOccupancySensorEvent(state, occupancySensorEvent);
+
+            case ChangeLivingRoomLightMode changeLivingRoomLightMode:
+                state.LivingRoomLightMode = changeLivingRoomLightMode.Mode;
+                return state;
+
+            case ChangeKitchenLightMode changeKitchenLightMode:
+                state.KitchenLightMode = changeKitchenLightMode.Mode;
+                return state;
+
+            case ChangeBedroomLightMode changeBedroomLightMode:
+                state.BedroomLightMode = changeBedroomLightMode.Mode;
+                return state;
+
+            default:
+                Console.WriteLine($"Unknown logic event: {@event} ({@event.GetType().Name})");
+                return state;
+        }
+    }
+
+    // ReSharper disable once UnusedParameter.Local
     private static State ProcessTimerTickEvent(State state, TimerTickEvent e)
     {
         if (state.KitchenOccupied)
@@ -201,6 +266,17 @@ public class MyLogic : IDisposable
         }
 
         return state;
+    }
+
+    private static async Task ProcessChangedState(State state, Devices devices)
+    {
+        await devices.Virtual.LivingRoomLightMode.Update(state.LivingRoomLightMode);
+        await devices.Virtual.KitchenLightMode.Update(state.KitchenLightMode);
+        await devices.Virtual.BedroomLightMode.Update(state.BedroomLightMode);
+
+        await UpdateLivingRoomLights(state, devices);
+        await UpdateKitchenLights(state, devices);
+        await UpdateBedroomLights(state, devices);
     }
 
     private static async Task UpdateLivingRoomLights(State state, Devices devices)
@@ -289,62 +365,5 @@ public class MyLogic : IDisposable
             await devices.Bedroom.StandLight1.TurnOff();
             await devices.Bedroom.StandLight2.TurnOff();
         }
-    }
-
-    private static State CreateState()
-    {
-        return new State
-        {
-            LivingRoomLightMode = LivingRoomLightMode.Off,
-            KitchenLightMode = KitchenLightMode.Auto,
-            BedroomLightMode = BedroomLightMode.Off,
-        };
-    }
-
-    private static async Task<Devices> CreateDevices(Configuration configuration)
-    {
-        var catScaleSensor = new CatScaleSensor(configuration.CatScaleConfig);
-
-        var sw = Stopwatch.StartNew();
-        var z2MDiscovery = new Z2MDiscovery(configuration.Z2MConfig);
-        var z2MDevices = await z2MDiscovery.DiscoverDevices();
-        Console.WriteLine($"Discovery found {z2MDevices.Length} devices in {sw.ElapsedMilliseconds} ms.");
-
-        var z2MDeviceFactory = new Z2MDeviceFactory(configuration.Z2MConfig, z2MDevices);
-
-        return new Devices
-        {
-            LivingRoom = new LivingRoomDevices
-            {
-                CeilingLight1 = z2MDeviceFactory.GetLight("dev/livingroom/light/ceiling-1"),
-                CeilingLight2 = z2MDeviceFactory.GetLight("dev/livingroom/light/ceiling-2"),
-                CeilingLight3 = z2MDeviceFactory.GetLight("dev/livingroom/light/ceiling-3"),
-                DeskLight = z2MDeviceFactory.GetLight("dev/livingroom/light/desk-1"),
-                TvLight = z2MDeviceFactory.GetLight("dev/livingroom/light/tv-1"),
-                Standing = z2MDeviceFactory.GetLight("dev/livingroom/light/standing-1"),
-            },
-
-            Kitchen = new KitchenDevices
-            {
-                Button1 = z2MDeviceFactory.GetButton("dev/kitchen/button-1"),
-                OccupancySensor1 = z2MDeviceFactory.GetOccupancySensor("dev/kitchen/occupancy-1"),
-                CeilingLight1 = z2MDeviceFactory.GetLight("dev/kitchen/light/ceiling-1"),
-                CeilingLight2 = z2MDeviceFactory.GetLight("dev/kitchen/light/ceiling-2"),
-                CeilingLight3 = z2MDeviceFactory.GetLight("dev/kitchen/light/ceiling-3"),
-                CeilingLight4 = z2MDeviceFactory.GetLight("dev/kitchen/light/ceiling-4"),
-            },
-
-            Bedroom = new BedroomDevices
-            {
-                Button1 = z2MDeviceFactory.GetButton("dev/bedroom/button-1"),
-                StandLight1 = z2MDeviceFactory.GetLight("dev/bedroom/light/stand-1"),
-                StandLight2 = z2MDeviceFactory.GetLight("dev/bedroom/light/stand-2"),
-            },
-
-            Bathroom = new BathroomDevices
-            {
-                CatScale = catScaleSensor,
-            }
-        };
     }
 }

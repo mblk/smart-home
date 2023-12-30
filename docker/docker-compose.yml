@@ -35,8 +35,8 @@ services:
         image: smarthome.service
         restart: unless-stopped
         environment:
-            - Z2M__Server=mosquitto
-            - Z2M__Port=1883
+            - MQTT__Server=mosquitto
+            - MQTT__Port=1883
             - CatScale__Endpoint=https://mblk.info
         networks:
             - smarthome

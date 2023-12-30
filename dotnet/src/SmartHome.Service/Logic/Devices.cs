@@ -1,14 +1,23 @@
 using SmartHome.Infrastructure.CatScale;
+using SmartHome.Infrastructure.Mqtt.SharedState;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 
 namespace SmartHome.Service.Logic;
 
 public class Devices
 {
-    public required LivingRoomDevices LivingRoom { get; init; }
-    public required KitchenDevices Kitchen { get; init; }
-    public required BedroomDevices Bedroom { get; init; }
-    public required BathroomDevices Bathroom { get; init; }
+    public required VirtualDevices Virtual;
+    public required LivingRoomDevices LivingRoom;
+    public required KitchenDevices Kitchen;
+    public required BedroomDevices Bedroom;
+    public required BathroomDevices Bathroom;
+}
+
+public class VirtualDevices
+{
+    public required IMqttSharedState<LivingRoomLightMode> LivingRoomLightMode;
+    public required IMqttSharedState<KitchenLightMode> KitchenLightMode;
+    public required IMqttSharedState<BedroomLightMode> BedroomLightMode;
 }
 
 public class LivingRoomDevices
@@ -40,5 +49,5 @@ public class BedroomDevices
 
 public class BathroomDevices
 {
-    public required CatScaleSensor CatScale { get; init; }
+    public required ICatScaleSensor CatScale;
 }

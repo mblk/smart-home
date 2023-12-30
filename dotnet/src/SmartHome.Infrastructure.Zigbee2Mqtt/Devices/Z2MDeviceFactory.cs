@@ -1,45 +1,54 @@
+using Microsoft.Extensions.Logging;
+using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
 
 namespace SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 
-public class Z2MDeviceFactory
+public interface IZ2MDeviceFactory
 {
-    private readonly Z2MConfig _config;
-    private readonly Z2MDiscoveryDevice[] _discoveredDevices;
+    IZ2MLight GetLight(string friendlyName);
+    IZ2MButton GetButton(string friendlyName);
+    IZ2MOccupancySensor GetOccupancySensor(string friendlyName);
+}
 
-    public Z2MDeviceFactory(Z2MConfig config, Z2MDiscoveryDevice[] discoveredDevices)
+public class Z2MDeviceFactory : IZ2MDeviceFactory
+{
+    private readonly IReadOnlyDictionary<string, Z2MDiscoveryDevice> _discoveredDevices;
+    private readonly IMqttConnector _mqttConnector;
+    private readonly ILogger<Z2MDeviceFactory> _logger;
+
+    public Z2MDeviceFactory(IEnumerable<Z2MDiscoveryDevice> discoveredDevices, IMqttConnector mqttConnector,
+        ILogger<Z2MDeviceFactory> logger)
     {
-        _config = config;
-        _discoveredDevices = discoveredDevices;
+        _discoveredDevices = discoveredDevices.ToDictionary(x => x.FriendlyName, x => x);
+        _mqttConnector = mqttConnector;
+        _logger = logger;
     }
 
     public IZ2MLight GetLight(string friendlyName)
     {
-        var device = _discoveredDevices.SingleOrDefault(x => x.FriendlyName == friendlyName);
-        if (device != null)
-            return new Z2MLight(_config, device);
-
-        Console.WriteLine($"ERROR: Device not found: {friendlyName}");
+        if (_discoveredDevices.TryGetValue(friendlyName, out var device))
+            return new Z2MLight(device, _mqttConnector);
+        
+        _logger.LogError("Device not found: {Name}", friendlyName);
         return new Z2MLightFallback();
     }
 
     public IZ2MButton GetButton(string friendlyName)
     {
-        var device = _discoveredDevices.SingleOrDefault(x => x.FriendlyName == friendlyName);
-        if (device != null)
-            return new Z2MButton(_config, device);
+        if (_discoveredDevices.TryGetValue(friendlyName, out var device))
+            return new Z2MButton(device, _mqttConnector);
 
-        Console.WriteLine($"ERROR: Device not found: {friendlyName}");
+        _logger.LogError("Device not found: {Name}", friendlyName);
         return new Z2MButtonFallback();
     }
 
     public IZ2MOccupancySensor GetOccupancySensor(string friendlyName)
     {
-        var device = _discoveredDevices.SingleOrDefault(x => x.FriendlyName == friendlyName);
-        if (device != null)
-            return new Z2MOccupancySensor(_config, device);
+        if (_discoveredDevices.TryGetValue(friendlyName, out var device))
+            return new Z2MOccupancySensor(device, _mqttConnector);
 
-        Console.WriteLine($"ERROR: Device not found: {friendlyName}");
+        _logger.LogError("Device not found: {Name}", friendlyName);
         return new Z2MOccupancySensorFallback();
     }
 }

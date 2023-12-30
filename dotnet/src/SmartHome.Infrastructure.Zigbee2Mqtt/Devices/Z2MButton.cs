@@ -1,5 +1,5 @@
-using System.ComponentModel;
 using System.Text.Json;
+using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
 
 namespace SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
@@ -8,8 +8,8 @@ public class Z2MButton : Z2MDevice, IZ2MButton
 {
     public event Z2MButtonEventHandler? Event;
 
-    public Z2MButton(Z2MConfig config, Z2MDiscoveryDevice device)
-        : base(config, device)
+    public Z2MButton(Z2MDiscoveryDevice device, IMqttConnector mqttConnector)
+        : base(device, mqttConnector)
     {
         _ = Task.Run(Worker);
     }
