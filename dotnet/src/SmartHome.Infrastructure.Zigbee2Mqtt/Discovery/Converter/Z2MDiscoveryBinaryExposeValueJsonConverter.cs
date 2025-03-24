@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
+namespace SmartHome.Infrastructure.Zigbee2Mqtt.Discovery.Converter;
 
 public class Z2MDiscoveryBinaryExposeValueJsonConverter : JsonConverter<object>
 {

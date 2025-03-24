@@ -17,7 +17,7 @@ public class LogicService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting ...");
+        _logger.LogInformation("Starting ... 111");
 
         var myLogic = _serviceScope.ServiceProvider.GetRequiredService<MyLogic>();
 

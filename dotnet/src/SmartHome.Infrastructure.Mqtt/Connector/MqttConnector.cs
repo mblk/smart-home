@@ -39,6 +39,7 @@ public class MqttConnector : IMqttConnector
         _ = await mqttClient.ConnectAsync(mqttClientOptions, cancellationToken);
 
         // Publish
+        Console.WriteLine($"Publish: {topic}: {payload}");
         await mqttClient.PublishStringAsync(topic, payload,
             cancellationToken: cancellationToken,
             retain: retain,

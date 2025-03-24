@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 
-namespace SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
+namespace SmartHome.Infrastructure.Zigbee2Mqtt.Discovery.Exposes;
 
-public class Z2MDiscoveryNumericExpose : Z2MDiscoveryExpose
+public class Z2MDiscoveryCompositeExpose : Z2MDiscoveryExpose
 {
     [JsonPropertyName("access")] public required int Access { get; init; }
 
@@ -12,7 +12,5 @@ public class Z2MDiscoveryNumericExpose : Z2MDiscoveryExpose
 
     [JsonPropertyName("property")] public required string Property { get; init; }
 
-    [JsonPropertyName("value_min")] public int? ValueMin { get; init; }
-
-    [JsonPropertyName("value_max")] public int? ValueMax { get; init; }
+    [JsonPropertyName("features")] public required Z2MDiscoveryExpose[] Features { get; set; }
 }

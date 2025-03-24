@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-SmartHome.Service-1fc3f0b3-4b7f-40fd-ac5d-e0db6bfad15a</UserSecretsId>
@@ -18,9 +18,4 @@
     <ProjectReference Include="..\SmartHome.Infrastructure.Zigbee2Mqtt\SmartHome.Infrastructure.Zigbee2Mqtt.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\..\.dockerignore">
-      <Link>.dockerignore</Link>
-    </Content>
-  </ItemGroup>
 </Project>

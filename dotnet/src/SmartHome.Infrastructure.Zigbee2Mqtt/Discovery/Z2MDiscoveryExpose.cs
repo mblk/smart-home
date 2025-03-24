@@ -1,3 +1,4 @@
+using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery.Converter;
 using System.Text.Json.Serialization;
 
 namespace SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;

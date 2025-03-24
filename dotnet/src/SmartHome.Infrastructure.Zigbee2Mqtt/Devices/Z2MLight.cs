@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
+using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery.Exposes;
 
 namespace SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 
@@ -23,7 +24,7 @@ public class Z2MLight : Z2MDevice, IZ2MLight
             SetColor(data, color.Value);
 
         var json = JsonSerializer.Serialize(data);
-        //Console.WriteLine($"json: {json}");
+
         await Publish(json);
     }
 
@@ -33,7 +34,7 @@ public class Z2MLight : Z2MDevice, IZ2MLight
         SetState(data, false);
 
         var json = JsonSerializer.Serialize(data);
-        //Console.WriteLine($"json: {json}");
+
         await Publish(json);
     }
 

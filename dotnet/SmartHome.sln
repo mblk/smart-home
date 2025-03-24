@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-#
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35913.81 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FB499442-8AFF-415C-AC77-66F2B37107DD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHome.Domain", "src\SmartHome.Domain\SmartHome.Domain.csproj", "{062B764B-61B3-481B-919B-B30F13750BB2}"
@@ -17,6 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHome.Utils", "src\Smar
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EB47B4F0-EBD8-496E-AC9F-E901CDE2D151}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		..\docker\docker-compose.yml = ..\docker\docker-compose.yml
 	EndProjectSection
 EndProject
@@ -32,18 +35,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Debug|x64.Build.0 = Debug|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Debug|x86.Build.0 = Debug|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Release|x64.ActiveCfg = Release|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Release|x64.Build.0 = Release|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Release|x86.ActiveCfg = Release|Any CPU
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3}.Release|x86.Build.0 = Release|Any CPU
 		{062B764B-61B3-481B-919B-B30F13750BB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{062B764B-61B3-481B-919B-B30F13750BB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{062B764B-61B3-481B-919B-B30F13750BB2}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -129,8 +120,10 @@ Global
 		{D35A4A31-28E0-4611-9EC1-B1FBB7E43A46}.Release|x86.ActiveCfg = Release|Any CPU
 		{D35A4A31-28E0-4611-9EC1-B1FBB7E43A46}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{6B9893F5-A179-462A-BC9D-FD87842A18B3} = {FB499442-8AFF-415C-AC77-66F2B37107DD}
 		{062B764B-61B3-481B-919B-B30F13750BB2} = {FB499442-8AFF-415C-AC77-66F2B37107DD}
 		{F92FCAA2-37CC-495B-A88A-C832C9D19239} = {FB499442-8AFF-415C-AC77-66F2B37107DD}
 		{EEBA5C85-1809-4AAF-B9AC-AD5A0FB3D866} = {FB499442-8AFF-415C-AC77-66F2B37107DD}

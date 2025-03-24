@@ -89,8 +89,7 @@ public class CatScaleSensor : ICatScaleSensor
 
     private async Task<int> GetPooCount()
     {
-        var pooCounts =
-            (await _httpClient.GetFromJsonAsync<PooCount[]>("api/ScaleEvent/GetPooCounts", _cts.Token))!;
+        var pooCounts = (await _httpClient.GetFromJsonAsync<PooCount[]>("api/ScaleEvent/GetPooCounts", _cts.Token))!;
 
         return pooCounts.Sum(pc => pc.Count);
     }

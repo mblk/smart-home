@@ -190,9 +190,10 @@ public class MyLogic : IAsyncDisposable
         }
     }
 
-    // ReSharper disable once UnusedParameter.Local
     private static State ProcessTimerTickEvent(State state, TimerTickEvent e)
     {
+        _ = e;
+
         if (state.KitchenOccupied)
         {
             state.KitchenOccupancyTimeout = 10;

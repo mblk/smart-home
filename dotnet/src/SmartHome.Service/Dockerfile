@@ -1,7 +1,7 @@
-FROM mcr.microsoft.com/dotnet/runtime:7.0 AS base
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
 WORKDIR /app
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY ["src/SmartHome.Domain/SmartHome.Domain.csproj", "src/SmartHome.Domain/"]
 COPY ["src/SmartHome.Infrastructure/SmartHome.Infrastructure.csproj", "src/SmartHome.Infrastructure/"]
@@ -22,3 +22,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "SmartHome.Service.dll"]
+   
