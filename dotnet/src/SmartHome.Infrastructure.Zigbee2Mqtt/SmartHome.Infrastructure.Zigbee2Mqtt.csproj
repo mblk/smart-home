@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SmartHome.Infrastructure.Mqtt\SmartHome.Infrastructure.Mqtt.csproj" />
+    <ProjectReference Include="..\SmartHome.Utils\SmartHome.Utils.csproj" />
   </ItemGroup>
 
 </Project>

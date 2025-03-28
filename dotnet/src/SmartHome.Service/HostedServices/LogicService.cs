@@ -17,11 +17,24 @@ public class LogicService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting ... 111");
+        _logger.LogInformation("Starting ...");
+
+        {
+            var t = DateTime.Now;
+            _logger.LogInformation("DateTime.Now {time} Kind {kind}", t, t.Kind);
+        }
 
         var myLogic = _serviceScope.ServiceProvider.GetRequiredService<MyLogic>();
 
-        await myLogic.Start(cancellationToken);
+        try
+        {
+            await myLogic.Start(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Failed to start: {Exception}", e);
+            throw;
+        }
         
         _logger.LogInformation("Started");
     }

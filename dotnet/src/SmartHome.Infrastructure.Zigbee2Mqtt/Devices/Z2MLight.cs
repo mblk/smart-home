@@ -2,6 +2,7 @@
 using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery.Exposes;
+using SmartHome.Utils;
 
 namespace SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 
@@ -62,9 +63,8 @@ public class Z2MLight : Z2MDevice, IZ2MLight
         if (brightnessExpose is null) return;
 
         var min = brightnessExpose.ValueMin ?? 0;
-        var max = brightnessExpose.ValueMax ?? 100;
-        var range = max - min;
-        var valueToSet = (int)Math.Round(min + range * brightness);
+        var max = brightnessExpose.ValueMax ?? 255;
+        var valueToSet = (int)Math.Round(MathExtensions.Lerp(min, max, brightness));
 
         data.Add(brightnessExpose.Property, valueToSet);
     }
@@ -74,16 +74,15 @@ public class Z2MLight : Z2MDevice, IZ2MLight
         var lightExpose = Device.Definition?.Exposes.OfType<Z2MDiscoveryLightExpose>().SingleOrDefault();
         if (lightExpose is null) return;
 
-        var brightnessExpose = lightExpose.Features.OfType<Z2MDiscoveryNumericExpose>()
+        var colorTempExpose = lightExpose.Features.OfType<Z2MDiscoveryNumericExpose>()
             .SingleOrDefault(x => x.Name == "color_temp");
-        if (brightnessExpose is null) return;
+        if (colorTempExpose is null) return;
 
-        var min = brightnessExpose.ValueMin ?? 0;
-        var max = brightnessExpose.ValueMax ?? 100;
-        var range = max - min;
-        var valueToSet = (int)Math.Round(min + range * temperature);
+        var min = colorTempExpose.ValueMin ?? 153;
+        var max = colorTempExpose.ValueMax ?? 370;
+        var valueToSet = (int)Math.Round(MathExtensions.Lerp(min, max, temperature));
 
-        data.Add(brightnessExpose.Property, valueToSet);
+        data.Add(colorTempExpose.Property, valueToSet);
     }
 
     private void SetColor(Dictionary<string, object> data, (double, double) color)

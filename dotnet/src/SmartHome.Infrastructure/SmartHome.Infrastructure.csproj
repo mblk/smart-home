@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SunCalcNet" Version="1.2.2" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="..\SmartHome.Domain\SmartHome.Domain.csproj" />
+    <ProjectReference Include="..\SmartHome.Utils\SmartHome.Utils.csproj" />
   </ItemGroup>
 
 </Project>

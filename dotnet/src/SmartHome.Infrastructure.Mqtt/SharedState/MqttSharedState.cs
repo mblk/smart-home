@@ -18,7 +18,7 @@ public class MqttSharedState<T> : IMqttSharedState<T>
 
     private T? _prevValue;
 
-    public event Action<T>? ChangeRequest;
+    public event Action<T?>? ChangeRequest;
 
     public MqttSharedState(IMqttConnector mqttConnector, string prefix, string name)
     {
@@ -29,7 +29,7 @@ public class MqttSharedState<T> : IMqttSharedState<T>
         Task.Run(Worker); // TODO change this somehow (same for Device classes)
     }
 
-    public async Task Update(T newValue)
+    public async Task Update(T? newValue)
     {
         // No change?
         if (_prevValue.Equals(newValue))
@@ -42,7 +42,7 @@ public class MqttSharedState<T> : IMqttSharedState<T>
 
         var payload = JsonSerializer.Serialize(new MqttSharedStateData
         {
-            CurrentValue = newValue.ToString(),
+            CurrentValue = newValue?.ToString() ?? String.Empty,
             AvailableValues = Enum.GetNames<T>(),
         });
 
@@ -59,7 +59,11 @@ public class MqttSharedState<T> : IMqttSharedState<T>
 
     private void OnDataReceived(string data)
     {
-        if (Enum.TryParse<T>(data, out var x))
+        if (String.IsNullOrWhiteSpace(data))
+        {
+            InvokeChangeRequest(null);
+        }
+        else if (Enum.TryParse<T>(data, out var x))
         {
             InvokeChangeRequest(x);
         }
@@ -69,7 +73,7 @@ public class MqttSharedState<T> : IMqttSharedState<T>
         }
     }
 
-    private void InvokeChangeRequest(T value)
+    private void InvokeChangeRequest(T? value)
     {
         try
         {

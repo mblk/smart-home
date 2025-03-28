@@ -49,6 +49,7 @@ public class MyLogic : IAsyncDisposable
         RegisterEvents(devices, eventQueue);
 
         devices.Bathroom.CatScale.Start();
+        devices.Virtual.Sun.Start();
 
         // @formatter:off
         _timerTask = Task.Run(async () =>
@@ -81,15 +82,30 @@ public class MyLogic : IAsyncDisposable
             => eventQueue.Add(new OccupancySensorEvent("kitchen", e.Occupancy));
 
         devices.Virtual.LivingRoomLightMode.ChangeRequest += x
-            => eventQueue.Add(new ChangeLivingRoomLightMode(x));
+            => { if (x != null) { eventQueue.Add(new ChangeLivingRoomLightMode(x.Value)); } };
         devices.Virtual.KitchenLightMode.ChangeRequest += x
-            => eventQueue.Add(new ChangeKitchenLightMode(x));
+            => { if (x != null) { eventQueue.Add(new ChangeKitchenLightMode(x.Value)); } };
         devices.Virtual.BedroomLightMode.ChangeRequest += x
-            => eventQueue.Add(new ChangeBedroomLightMode(x));
+            => { if (x != null) { eventQueue.Add(new ChangeBedroomLightMode(x.Value)); } };
+
+        devices.Virtual.Sun.SunStateChanged += (_, s) =>
+        {
+            Console.WriteLine($"SunStateChanged: {s}");
+
+        };
+
+        devices.Virtual.MasterMode.ChangeRequest += x =>
+        {
+            Console.WriteLine($"MasterMode ChangeRequest {x}");
+        };
+
+        devices.Virtual.MasterModeOverride.ChangeRequest += x =>
+        {
+            Console.WriteLine($"MasterModeOverride ChangeRequest {x}");
+        };
     }
 
-    private static async Task TimerTaskFunc(BlockingCollection<LogicEvent> eventQueue,
-        CancellationToken cancellationToken)
+    private static async Task TimerTaskFunc(BlockingCollection<LogicEvent> eventQueue, CancellationToken cancellationToken)
     {
         try
         {
@@ -104,13 +120,14 @@ public class MyLogic : IAsyncDisposable
         }
     }
 
-    private static async Task EventLoopTaskFunc(BlockingCollection<LogicEvent> eventQueue, Devices devices,
-        ILogger logger, CancellationToken cancellationToken)
+    private static async Task EventLoopTaskFunc(BlockingCollection<LogicEvent> eventQueue, Devices devices, ILogger logger, CancellationToken cancellationToken)
     {
         var state = CreateState();
 
         try
         {
+            await ProcessChangedState(state, devices);
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 foreach (var @event in eventQueue.GetConsumingEnumerable(cancellationToken))
@@ -150,6 +167,8 @@ public class MyLogic : IAsyncDisposable
     {
         return new State
         {
+            MasterMode = MasterMode.Awake,
+
             LivingRoomLightMode = LivingRoomLightMode.Off,
             KitchenLightMode = KitchenLightMode.Auto,
             BedroomLightMode = BedroomLightMode.Off,
@@ -194,6 +213,31 @@ public class MyLogic : IAsyncDisposable
     {
         _ = e;
 
+        // ---
+        if (state.MasterMode == MasterMode.Sleeping)
+        {
+            var timeNow = TimeOnly.FromDateTime(DateTime.Now);
+            var wakeTime = state.WakeUpTime;
+
+            if (wakeTime <= timeNow && timeNow < wakeTime.AddMinutes(5))
+            {
+                state.MasterMode = MasterMode.WakingUp;
+
+                state.WakingIntensity = 0d;
+                state.WakingTicks = 0;
+            }
+        }
+        // ---
+        if (state.MasterMode == MasterMode.WakingUp)
+        {
+            var timeNow = TimeOnly.FromDateTime(DateTime.Now);
+            var wakingTime = timeNow - state.WakeUpTime;
+
+            state.WakingIntensity = (wakingTime.TotalMinutes / state.WakeUpPeriod).Clamp(0d, 1d);
+            state.WakingTicks++;
+        }
+        // ---
+
         if (state.KitchenOccupied)
         {
             state.KitchenOccupancyTimeout = 10;
@@ -218,19 +262,34 @@ public class MyLogic : IAsyncDisposable
         switch (e.Button)
         {
             case "kitchen":
-                switch (e.Action)
+
+                if (state.MasterMode == MasterMode.WakingUp)
                 {
-                    case "button_1_single":
-                        state.LivingRoomLightMode = state.LivingRoomLightMode.Next();
-                        break;
+                    state.MasterMode = MasterMode.Awake;
+                }
+                else
+                {
+                    switch (e.Action)
+                    {
+                        case "button_1_single":
+                            state.LivingRoomLightMode = state.LivingRoomLightMode.Next();
+                            break;
 
-                    case "button_2_single":
-                        state.KitchenLightMode = state.KitchenLightMode.Next();
-                        break;
+                        case "button_2_single":
+                            state.KitchenLightMode = state.KitchenLightMode.Next();
+                            break;
 
-                    case "button_3_single":
-                        state.BedroomLightMode = state.BedroomLightMode.Next();
-                        break;
+                        case "button_3_single":
+                            if (state.MasterMode == MasterMode.Awake)
+                            {
+                                state.MasterMode = MasterMode.GoingToBed;
+                            }
+                            else if (state.MasterMode == MasterMode.GoingToBed)
+                            {
+                                state.MasterMode = MasterMode.Awake;
+                            }
+                            break;
+                    }
                 }
 
                 break;
@@ -240,6 +299,27 @@ public class MyLogic : IAsyncDisposable
                 {
                     case "button_1_single":
                         state.BedroomLightMode = state.BedroomLightMode.Next();
+                        break;
+
+                    case "button_2_single":
+                        break;
+
+                    case "button_3_single":
+                        if (state.MasterMode == MasterMode.Awake)
+                        {
+                            state.MasterMode = MasterMode.GoingToBed;
+                        }
+                        else if (state.MasterMode == MasterMode.GoingToBed)
+                        {
+                            state.MasterMode = MasterMode.Awake;
+                        }
+                        break;
+
+                    case "button_4_single":
+                        if (state.MasterMode == MasterMode.GoingToBed)
+                        {
+                            state.MasterMode = MasterMode.Sleeping;
+                        }
                         break;
                 }
 
@@ -271,6 +351,9 @@ public class MyLogic : IAsyncDisposable
 
     private static async Task ProcessChangedState(State state, Devices devices)
     {
+        await devices.Virtual.MasterMode.Update(state.MasterMode);
+        await devices.Virtual.MasterModeOverride.Update(state.MasterModeOverride);
+
         await devices.Virtual.LivingRoomLightMode.Update(state.LivingRoomLightMode);
         await devices.Virtual.KitchenLightMode.Update(state.KitchenLightMode);
         await devices.Virtual.BedroomLightMode.Update(state.BedroomLightMode);
@@ -348,23 +431,62 @@ public class MyLogic : IAsyncDisposable
 
     private static async Task UpdateBedroomLights(State state, Devices devices)
     {
-        double bedroomLightLevel = state.BedroomLightMode switch
+        if (state.MasterMode == MasterMode.GoingToBed)
         {
-            BedroomLightMode.Off => 0d,
-            BedroomLightMode.Dim => 0.25d,
-            BedroomLightMode.Full => 1d,
-            _ => 0d,
-        };
+            const double bedroomLightLevel = 0.25d;
 
-        if (bedroomLightLevel > 0.1d)
-        {
             await devices.Bedroom.StandLight1.TurnOn(brightness: bedroomLightLevel);
             await devices.Bedroom.StandLight2.TurnOn(brightness: bedroomLightLevel);
         }
-        else
+        else if (state.MasterMode == MasterMode.Sleeping)
         {
             await devices.Bedroom.StandLight1.TurnOff();
             await devices.Bedroom.StandLight2.TurnOff();
+        }
+        else if (state.MasterMode == MasterMode.WakingUp)
+        {
+            if (state.WakingIntensity < 0.9d)
+            {
+                var level = state.WakingIntensity;
+
+                await devices.Bedroom.StandLight1.TurnOn(brightness: level, temperature: 0d);
+                await devices.Bedroom.StandLight2.TurnOn(brightness: level, temperature: 0d);
+            }
+            else
+            {
+                if (state.WakingTicks % 2 == 0)
+                {
+                    await devices.Bedroom.StandLight1.TurnOn(brightness: 1d, temperature: 0d);
+                    await devices.Bedroom.StandLight2.TurnOn(brightness: 1d, temperature: 0d);
+                }
+                else
+                {
+                    await devices.Bedroom.StandLight1.TurnOff();
+                    await devices.Bedroom.StandLight2.TurnOff();
+                }
+            }
+        }
+        else
+        {
+            double bedroomLightLevel = state.BedroomLightMode switch
+            {
+                BedroomLightMode.Off => 0d,
+                BedroomLightMode.Dim => 0.25d,
+                BedroomLightMode.Full => 1d,
+                _ => 0d,
+            };
+
+            if (bedroomLightLevel > 0.1d)
+            {
+                await devices.Bedroom.StandLight1.TurnOn(brightness: bedroomLightLevel);
+                await devices.Bedroom.StandLight2.TurnOn(brightness: bedroomLightLevel);
+            }
+            else
+            {
+                await devices.Bedroom.StandLight1.TurnOff();
+                await devices.Bedroom.StandLight2.TurnOff();
+            }
+
         }
     }
 }

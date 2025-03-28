@@ -1,4 +1,5 @@
 using SmartHome.Infrastructure.CatScale;
+using SmartHome.Infrastructure.Devices;
 using SmartHome.Infrastructure.Mqtt.SharedState;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 
@@ -15,6 +16,11 @@ public class Devices
 
 public class VirtualDevices
 {
+    public required ISunSensor Sun;
+
+    public required IMqttSharedState<MasterMode> MasterMode;
+    public required IMqttSharedState<MasterMode> MasterModeOverride;
+
     public required IMqttSharedState<LivingRoomLightMode> LivingRoomLightMode;
     public required IMqttSharedState<KitchenLightMode> KitchenLightMode;
     public required IMqttSharedState<BedroomLightMode> BedroomLightMode;

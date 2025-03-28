@@ -1,5 +1,15 @@
 namespace SmartHome.Service.Logic;
 
+public enum MasterMode
+{
+    Awake,
+    GoingToBed,
+    Sleeping,
+    WakingUp,
+
+    Away,
+}
+
 public enum LivingRoomLightMode
 {
     Off,
@@ -24,17 +34,35 @@ public enum BedroomLightMode
 
 public struct State
 {
+    // config
+    public TimeOnly WakeUpTime = new TimeOnly(7, 0);
+    public double WakeUpPeriod = 15.0d; // Minutes
+
+
+
+    public required MasterMode MasterMode;
+    public MasterMode? MasterModeOverride;
+    public readonly MasterMode EffectiveMasterMode => MasterModeOverride ?? MasterMode;
+
+
+
+
+    public double WakingIntensity;
+    public int WakingTicks;
+
+
+
+
     public bool LitterBoxIsDirty;
 
     public bool KitchenOccupied;
     public int KitchenOccupancyTimeout;
-    
-    public LivingRoomLightMode LivingRoomLightMode;
-    public KitchenLightMode KitchenLightMode;
-    public BedroomLightMode BedroomLightMode;
 
-    // ...
-    // Sleepmode
-    // AtHome
-    // ...
+    public required LivingRoomLightMode LivingRoomLightMode;
+    public required KitchenLightMode KitchenLightMode;
+    public required BedroomLightMode BedroomLightMode;
+
+    public State()
+    {
+    }
 }

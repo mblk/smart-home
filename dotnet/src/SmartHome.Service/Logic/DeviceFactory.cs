@@ -1,4 +1,5 @@
 using SmartHome.Infrastructure.CatScale;
+using SmartHome.Infrastructure.Devices;
 using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Mqtt.SharedState;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
@@ -23,6 +24,11 @@ public static class DeviceFactory
         {
             Virtual = new VirtualDevices
             {
+                Sun = new SunSensor(),
+
+                MasterMode = new MqttSharedState<MasterMode>(mqttConnector, "state", "master"),
+                MasterModeOverride = new MqttSharedState<MasterMode>(mqttConnector, "state", "master_override"),
+
                 LivingRoomLightMode = new MqttSharedState<LivingRoomLightMode>(mqttConnector, "state", "livingroom"),
                 KitchenLightMode = new MqttSharedState<KitchenLightMode>(mqttConnector, "state", "kitchen"),
                 BedroomLightMode = new MqttSharedState<BedroomLightMode>(mqttConnector, "state", "bedroom"),
