@@ -19,7 +19,7 @@ public class VirtualDevices
     public required ISunSensor Sun;
 
     public required IMqttSharedState<MasterMode> MasterMode;
-    public required IMqttSharedState<MasterMode> MasterModeOverride;
+    //public required IMqttSharedState<MasterMode> MasterModeOverride;
 
     public required IMqttSharedState<LivingRoomLightMode> LivingRoomLightMode;
     public required IMqttSharedState<KitchenLightMode> KitchenLightMode;

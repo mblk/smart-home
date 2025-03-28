@@ -1,4 +1,5 @@
 using SmartHome.Service.Logic;
+using System.Globalization;
 
 namespace SmartHome.Service.HostedServices;
 
@@ -21,7 +22,8 @@ public class LogicService : IHostedService
 
         {
             var t = DateTime.Now;
-            _logger.LogInformation("DateTime.Now {time} Kind {kind}", t, t.Kind);
+            _logger.LogInformation("DateTime.Now {time} | {time2} Kind {kind} Culture {culture} UICulture {uiCulture}",
+                t, t.ToString(), t.Kind, CultureInfo.CurrentCulture, CultureInfo.CurrentUICulture);
         }
 
         var myLogic = _serviceScope.ServiceProvider.GetRequiredService<MyLogic>();

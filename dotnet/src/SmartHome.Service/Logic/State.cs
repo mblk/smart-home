@@ -36,13 +36,13 @@ public struct State
 {
     // config
     public TimeOnly WakeUpTime = new TimeOnly(7, 0);
-    public double WakeUpPeriod = 15.0d; // Minutes
+    public TimeSpan WakeUpPeriod = TimeSpan.FromMinutes(10d);
 
 
 
     public required MasterMode MasterMode;
-    public MasterMode? MasterModeOverride;
-    public readonly MasterMode EffectiveMasterMode => MasterModeOverride ?? MasterMode;
+    //public MasterMode? MasterModeOverride;
+    //public readonly MasterMode EffectiveMasterMode => MasterModeOverride ?? MasterMode;
 
 
 

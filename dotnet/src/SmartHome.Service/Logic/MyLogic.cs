@@ -91,7 +91,6 @@ public class MyLogic : IAsyncDisposable
         devices.Virtual.Sun.SunStateChanged += (_, s) =>
         {
             Console.WriteLine($"SunStateChanged: {s}");
-
         };
 
         devices.Virtual.MasterMode.ChangeRequest += x =>
@@ -99,10 +98,10 @@ public class MyLogic : IAsyncDisposable
             Console.WriteLine($"MasterMode ChangeRequest {x}");
         };
 
-        devices.Virtual.MasterModeOverride.ChangeRequest += x =>
-        {
-            Console.WriteLine($"MasterModeOverride ChangeRequest {x}");
-        };
+        //devices.Virtual.MasterModeOverride.ChangeRequest += x =>
+        //{
+        //    Console.WriteLine($"MasterModeOverride ChangeRequest {x}");
+        //};
     }
 
     private static async Task TimerTaskFunc(BlockingCollection<LogicEvent> eventQueue, CancellationToken cancellationToken)
@@ -233,7 +232,7 @@ public class MyLogic : IAsyncDisposable
             var timeNow = TimeOnly.FromDateTime(DateTime.Now);
             var wakingTime = timeNow - state.WakeUpTime;
 
-            state.WakingIntensity = (wakingTime.TotalMinutes / state.WakeUpPeriod).Clamp(0d, 1d);
+            state.WakingIntensity = (wakingTime / state.WakeUpPeriod).Clamp(0d, 1d);
             state.WakingTicks++;
         }
         // ---
@@ -352,7 +351,7 @@ public class MyLogic : IAsyncDisposable
     private static async Task ProcessChangedState(State state, Devices devices)
     {
         await devices.Virtual.MasterMode.Update(state.MasterMode);
-        await devices.Virtual.MasterModeOverride.Update(state.MasterModeOverride);
+        //await devices.Virtual.MasterModeOverride.Update(state.MasterModeOverride);
 
         await devices.Virtual.LivingRoomLightMode.Update(state.LivingRoomLightMode);
         await devices.Virtual.KitchenLightMode.Update(state.KitchenLightMode);
@@ -431,62 +430,58 @@ public class MyLogic : IAsyncDisposable
 
     private static async Task UpdateBedroomLights(State state, Devices devices)
     {
-        if (state.MasterMode == MasterMode.GoingToBed)
-        {
-            const double bedroomLightLevel = 0.25d;
+        var targetBrightness = 0d;
+        var targetTemperature = 1d; // warm light by default
 
-            await devices.Bedroom.StandLight1.TurnOn(brightness: bedroomLightLevel);
-            await devices.Bedroom.StandLight2.TurnOn(brightness: bedroomLightLevel);
-        }
-        else if (state.MasterMode == MasterMode.Sleeping)
+        switch (state.MasterMode)
         {
-            await devices.Bedroom.StandLight1.TurnOff();
-            await devices.Bedroom.StandLight2.TurnOff();
-        }
-        else if (state.MasterMode == MasterMode.WakingUp)
-        {
-            if (state.WakingIntensity < 0.9d)
-            {
-                var level = state.WakingIntensity;
+            case MasterMode.Away:
+                break;
 
-                await devices.Bedroom.StandLight1.TurnOn(brightness: level, temperature: 0d);
-                await devices.Bedroom.StandLight2.TurnOn(brightness: level, temperature: 0d);
-            }
-            else
-            {
-                if (state.WakingTicks % 2 == 0)
+            case MasterMode.Awake:
+
+                targetBrightness = state.BedroomLightMode switch
                 {
-                    await devices.Bedroom.StandLight1.TurnOn(brightness: 1d, temperature: 0d);
-                    await devices.Bedroom.StandLight2.TurnOn(brightness: 1d, temperature: 0d);
+                    BedroomLightMode.Off => 0d,
+                    BedroomLightMode.Dim => 0.25d,
+                    BedroomLightMode.Full => 1d,
+                    _ => 0d,
+                };
+
+                break;
+
+            case MasterMode.GoingToBed:
+                targetBrightness = 0.25;
+                break;
+
+            case MasterMode.Sleeping:
+                break;
+
+            case MasterMode.WakingUp:
+
+                targetTemperature = 0d; // cold light
+
+                if (state.WakingIntensity < 0.99d)
+                {
+                    targetBrightness = state.WakingIntensity;
                 }
                 else
                 {
-                    await devices.Bedroom.StandLight1.TurnOff();
-                    await devices.Bedroom.StandLight2.TurnOff();
+                    targetBrightness = (state.WakingTicks % 2 == 0) ? 1d : 0d;
                 }
-            }
+
+                break;
+        }
+
+        if (targetBrightness > 0.01d)
+        {
+            await devices.Bedroom.StandLight1.TurnOn(brightness: targetBrightness, temperature: targetTemperature);
+            await devices.Bedroom.StandLight2.TurnOn(brightness: targetBrightness, temperature: targetTemperature);
         }
         else
         {
-            double bedroomLightLevel = state.BedroomLightMode switch
-            {
-                BedroomLightMode.Off => 0d,
-                BedroomLightMode.Dim => 0.25d,
-                BedroomLightMode.Full => 1d,
-                _ => 0d,
-            };
-
-            if (bedroomLightLevel > 0.1d)
-            {
-                await devices.Bedroom.StandLight1.TurnOn(brightness: bedroomLightLevel);
-                await devices.Bedroom.StandLight2.TurnOn(brightness: bedroomLightLevel);
-            }
-            else
-            {
-                await devices.Bedroom.StandLight1.TurnOff();
-                await devices.Bedroom.StandLight2.TurnOff();
-            }
-
+            await devices.Bedroom.StandLight1.TurnOff();
+            await devices.Bedroom.StandLight2.TurnOff();
         }
     }
 }

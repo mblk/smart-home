@@ -27,7 +27,7 @@ public static class DeviceFactory
                 Sun = new SunSensor(),
 
                 MasterMode = new MqttSharedState<MasterMode>(mqttConnector, "state", "master"),
-                MasterModeOverride = new MqttSharedState<MasterMode>(mqttConnector, "state", "master_override"),
+                //MasterModeOverride = new MqttSharedState<MasterMode>(mqttConnector, "state", "master_override"),
 
                 LivingRoomLightMode = new MqttSharedState<LivingRoomLightMode>(mqttConnector, "state", "livingroom"),
                 KitchenLightMode = new MqttSharedState<KitchenLightMode>(mqttConnector, "state", "kitchen"),
