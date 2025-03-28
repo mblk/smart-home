@@ -44,7 +44,7 @@ services:
         networks:
             - smarthome
         build:
-            context: .
+            context: ../dotnet/
             dockerfile: ../dotnet/src/SmartHome.Service/Dockerfile
 networks:
     smarthome:
