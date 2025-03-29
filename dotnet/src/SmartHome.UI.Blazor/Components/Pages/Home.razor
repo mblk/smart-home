@@ -1,0 +1,123 @@
+﻿@using SmartHome.UI.Blazor.Services
+
+@page "/"
+@rendermode InteractiveServer
+@inject IDataService dataService;
+
+@implements IAsyncDisposable
+
+<PageTitle>Home</PageTitle>
+
+<style>
+
+    button {
+    width: 200px;
+    height: 50px;
+    }
+
+    .selected {
+    background: #999;
+    }
+
+
+
+</style>
+
+<h1>SmartHome Control</h1>
+
+@foreach (var (itemId, item) in _items.OrderBy(x => x.Key))
+{
+    <div>
+        Item: @itemId (@item.GetType().Name)
+    </div>
+
+    switch (item)
+    {
+        case EnumItem enumItem:
+
+            <div>
+                Current: @enumItem.CurrentValue
+            </div>
+
+            foreach (var value in enumItem.AllValues)
+            {
+                var buttonClasses = "";
+
+                if (value == enumItem.CurrentValue) {
+                    buttonClasses += "selected";
+                }
+
+                <button class="@buttonClasses" @onclick="@(() => SetState(itemId, value))">@value</button>
+            }
+
+            break;
+    }
+}
+
+@code
+{
+    private readonly Dictionary<string, Item> _items = [];
+
+    private IAsyncDisposable? _subscription = null;
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     Console.WriteLine($"Home OnInitializedAsync IsInteractive={RendererInfo.IsInteractive}");
+    //     await base.OnInitializedAsync();
+    // }
+
+    // protected override Task OnParametersSetAsync()
+    // {
+    //     Console.WriteLine($"Home OnParametersSetAsync IsInteractive={RendererInfo.IsInteractive}");
+    //     return base.OnParametersSetAsync();
+    // }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        Console.WriteLine($"Home OnAfterRenderAsync IsInteractive={RendererInfo.IsInteractive} firstRender={firstRender}");
+
+        if (firstRender)
+        {
+            _subscription = await dataService.Subscribe(OnItemChanged);
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    // public void Dispose()
+    // {
+    //     Console.WriteLine($"Home Dispose IsInteractive={RendererInfo.IsInteractive}");
+    // }
+
+    public async ValueTask DisposeAsync()
+    {
+        Console.WriteLine($"Home DisposeAsync IsInteractive={RendererInfo.IsInteractive}");
+
+        if (_subscription != null)
+        {
+            await _subscription.DisposeAsync();
+        }
+    }
+
+
+    private void OnItemChanged(Item item)
+    {
+        Console.WriteLine($"Home.OnItemChanged: {item}");
+
+        _items[item.Id] = item;
+
+        base.InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SetState(string state, string value)
+    {
+        try
+        {
+            await dataService.SetState(state, value);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.ToString());
+        }
+    }
+}
