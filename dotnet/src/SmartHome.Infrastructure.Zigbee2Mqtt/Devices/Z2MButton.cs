@@ -19,8 +19,10 @@ public class Z2MButton : Z2MDevice, IZ2MButton
         await Subscribe(OnDataReceived);
     }
 
-    private void OnDataReceived(string data)
+    private void OnDataReceived(string topic, string data)
     {
+        _ = topic;
+
         var values = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(data);
         if (values is null)
             return;

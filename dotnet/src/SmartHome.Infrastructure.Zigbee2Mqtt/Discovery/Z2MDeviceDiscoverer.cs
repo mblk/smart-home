@@ -27,8 +27,10 @@ public class Z2MDeviceDiscoverer : IZ2MDeviceDiscoverer
         // Subscribe
         var subscription = await _mqttConnector.Subscribe("discovery", DevicesTopic, onDataReceived, cancellationToken);
 
-        void onDataReceived(string data)
+        void onDataReceived(string topic, string data)
         {
+            _ = topic;
+
             devicesReceived = true;
             devicesData = data;
         }

@@ -32,7 +32,7 @@ public abstract class Z2MDevice
         _prevPayload = payload;
     }
 
-    protected async Task Subscribe(Action<string> action)
+    protected async Task Subscribe(Action<string, string> action)
     {
         var clientId = _device.FriendlyName;
         var topic = $"zigbee2mqtt/{Device.FriendlyName}";

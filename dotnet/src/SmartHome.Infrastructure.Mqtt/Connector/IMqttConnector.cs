@@ -2,9 +2,16 @@ namespace SmartHome.Infrastructure.Mqtt.Connector;
 
 public interface IMqttConnector
 {
-    Task Publish(string clientId, string topic, string payload, bool retain = false,
+    Task Publish(
+        string clientId,
+        string topic,
+        string payload,
+        bool retain = false,
         CancellationToken cancellationToken = default);
 
-    Task<IAsyncDisposable> Subscribe(string clientId, string topic, Action<string> action,
+    Task<IAsyncDisposable> Subscribe(
+        string clientId,
+        string topic,
+        Action<string, string> action,
         CancellationToken cancellationToken = default);
 }

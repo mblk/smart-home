@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using MQTTnet.Diagnostics;
+using MQTTnet.Diagnostics.Logger;
 
 namespace SmartHome.Infrastructure.Mqtt.Connector;
 
@@ -14,14 +14,17 @@ public class MqttNetCustomLogger : IMqttNetLogger
         _logger = logger;
     }
     
-    public void Publish(MqttNetLogLevel logLevel, string source, string message, object[] parameters,
-        Exception exception)
+    public void Publish(MqttNetLogLevel logLevel, string source, string message, object[] parameters, Exception exception)
     {
         switch (logLevel)
         {
             default:
             case MqttNetLogLevel.Verbose:
+                //_logger.LogDebug(exception, "MQTTNet: {Message} {Params}", message, parameters);
+                break;
+
             case MqttNetLogLevel.Info:
+                //_logger.LogInformation(exception, "MQTTNet: {Message} {Params}", message, parameters);
                 break;
             
             case MqttNetLogLevel.Warning:

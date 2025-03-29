@@ -46,7 +46,7 @@ public class MqttSharedState<T> : IMqttSharedState<T>
             AvailableValues = Enum.GetNames<T>(),
         });
 
-        await _mqttConnector.Publish(clientId, topic, payload);
+        await _mqttConnector.Publish(clientId, topic, payload, retain: true);
     }
 
     private async Task Worker()
@@ -57,8 +57,10 @@ public class MqttSharedState<T> : IMqttSharedState<T>
         _ = await _mqttConnector.Subscribe(clientId, topic, OnDataReceived);
     }
 
-    private void OnDataReceived(string data)
+    private void OnDataReceived(string topic, string data)
     {
+        _ = topic;
+
         if (String.IsNullOrWhiteSpace(data))
         {
             InvokeChangeRequest(null);
