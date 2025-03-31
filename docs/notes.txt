@@ -9,6 +9,7 @@
 dnf install mqttcli
 
 sub -broker mqtt://localhost:1883 -topic "#"
+sub -broker mqtt://localhost:1883 -topic "state/#"
 
 echo -n "Off" | pub -broker mqtt://localhost:1883 -topic state/bedroom/set
 
@@ -18,15 +19,15 @@ echo -n "Off" | pub -broker mqtt://localhost:1883 -topic state/bedroom/set
 ## docker
 ##
 
+# build on target
+cd docker
+docker compose build
+docker compose up -d
+
+# build on dev
 cd dotnet
-
 docker build -t smarthome.service:latest -f .\src\SmartHome.Service\Dockerfile .
-
 docker save -o smarthome.service.tar smarthome.service:latest
-
 scp .\smarthome.service.tar smarthome@media:/home/smarthome
-
 ssh smarthome@media "docker load -i smarthome.service.tar"
-
-
-
+...
