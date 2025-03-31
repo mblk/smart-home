@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:
     mosquitto:
@@ -46,6 +46,22 @@ services:
         build:
             context: ../dotnet/
             dockerfile: ../dotnet/src/SmartHome.Service/Dockerfile
+    smarthome.ui.blazor:
+        container_name: smarthome.ui.blazor
+        image: smarthome.ui.blazor
+        restart: unless-stopped
+        environment:
+            - TZ=Europe/Berlin
+            - MQTT__Server=mosquitto
+            - MQTT__Port=1883
+            - DOTNET_URLS=http://*:8081
+        ports:
+            - 8081:8081
+        networks:
+            - smarthome
+        build:
+            context: ../dotnet/
+            dockerfile: ../dotnet/src/SmartHome.UI.Blazor/Dockerfile
 networks:
     smarthome:
         name: smarthome
