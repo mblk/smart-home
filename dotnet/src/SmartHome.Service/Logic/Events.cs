@@ -10,6 +10,6 @@ public record ButtonPressEvent(string Button, string Action) : LogicEvent;
 
 public record OccupancySensorEvent(string Sensor, bool Occupancy) : LogicEvent;
 
-public record ChangeLivingRoomLightMode(LivingRoomLightMode Mode) : LogicEvent;
-public record ChangeKitchenLightMode(KitchenLightMode Mode) : LogicEvent;
-public record ChangeBedroomLightMode(BedroomLightMode Mode) : LogicEvent;
+public record ChangeLivingRoomLightMode(LightMode Mode) : LogicEvent;
+public record ChangeKitchenLightMode(LightMode Mode) : LogicEvent;
+public record ChangeBedroomLightMode(LightMode Mode) : LogicEvent;

@@ -27,11 +27,12 @@ public static class DeviceFactory
                 Sun = new SunSensor(),
 
                 MasterMode = new MqttSharedState<MasterMode>(mqttConnector, "state", "master"),
-                //MasterModeOverride = new MqttSharedState<MasterMode>(mqttConnector, "state", "master_override"),
 
-                LivingRoomLightMode = new MqttSharedState<LivingRoomLightMode>(mqttConnector, "state", "livingroom"),
-                KitchenLightMode = new MqttSharedState<KitchenLightMode>(mqttConnector, "state", "kitchen"),
-                BedroomLightMode = new MqttSharedState<BedroomLightMode>(mqttConnector, "state", "bedroom"),
+                LivingRoomLightMode = new MqttSharedState<LightMode>(mqttConnector, "state", "livingroom"),
+                KitchenLightMode = new MqttSharedState<LightMode>(mqttConnector, "state", "kitchen"),
+                BedroomLightMode = new MqttSharedState<LightMode>(mqttConnector, "state", "bedroom"),
+
+                Sensor = new Z2MSensor(mqttConnector),
             },
 
             LivingRoom = new LivingRoomDevices

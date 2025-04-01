@@ -1,4 +1,5 @@
 using SmartHome.Infrastructure.CatScale;
+using SmartHome.Infrastructure.Influx.Services;
 using SmartHome.Infrastructure.Mqtt.Connector;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
 using SmartHome.Service.HostedServices;
@@ -21,6 +22,7 @@ builder.ConfigureServices(services =>
     services.AddScoped<ICatScaleSensor, CatScaleSensor>();
     services.AddScoped<IMqttConnector, MqttConnector>();
     services.AddScoped<IZ2MDeviceDiscoverer, Z2MDeviceDiscoverer>();
+    services.AddScoped<IInfluxService, InfluxService>();
     services.AddScoped<MyLogic>();
 
     services.AddHostedService<LogicService>();

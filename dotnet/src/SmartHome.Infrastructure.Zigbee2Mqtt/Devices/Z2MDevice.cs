@@ -18,7 +18,6 @@ public abstract class Z2MDevice
         _mqttConnector = mqttConnector;
     }
 
-
     protected async Task Publish(string payload)
     {
         if (_prevPayload == payload)

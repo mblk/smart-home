@@ -19,11 +19,12 @@ public class VirtualDevices
     public required ISunSensor Sun;
 
     public required IMqttSharedState<MasterMode> MasterMode;
-    //public required IMqttSharedState<MasterMode> MasterModeOverride;
 
-    public required IMqttSharedState<LivingRoomLightMode> LivingRoomLightMode;
-    public required IMqttSharedState<KitchenLightMode> KitchenLightMode;
-    public required IMqttSharedState<BedroomLightMode> BedroomLightMode;
+    public required IMqttSharedState<LightMode> LivingRoomLightMode;
+    public required IMqttSharedState<LightMode> KitchenLightMode;
+    public required IMqttSharedState<LightMode> BedroomLightMode;
+
+    public required Z2MSensor Sensor;
 }
 
 public class LivingRoomDevices

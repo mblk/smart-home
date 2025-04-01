@@ -76,7 +76,7 @@ public class CatScaleSensor : ICatScaleSensor
             {
                 _logger.LogInformation("Gateway Time-Out");
             }
-            catch (IOException e) when (e.Message == "The response ended prematurely.")
+            catch (IOException e) when (e.Message.Contains("response ended prematurely"))
             {
                 _logger.LogInformation("The response ended prematurely");
             }

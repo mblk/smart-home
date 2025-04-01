@@ -56,6 +56,10 @@ services:
             - MQTT__Server=mosquitto
             - MQTT__Port=1883
             - CatScale__Endpoint=https://mblk.info
+            - Influx__Url=http://influx:8086
+            - Influx__Token=m8W7Cg4yO48I6xGJx9iYWsmDFSLE6E-8C1q2YXvhY5zpchM8o9MqPZe_I14RY0CF1pVmFZDx0Fv1lhh0Pg-VGQ== # TODO use secret. no security issue, only used on internal network
+            - Influx__Org=org
+            - Influx__Bucket=test1
         networks:
             - smarthome
         build:

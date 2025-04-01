@@ -1,22 +1,26 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using SmartHome.Infrastructure.Influx.Services;
 using SmartHome.Utils;
 
 namespace SmartHome.Service.Logic;
 
 public class MyLogic : IAsyncDisposable
 {
+    private readonly CancellationTokenSource _cts = new();
+
     private readonly ILogger<MyLogic> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly CancellationTokenSource _cts = new();
+    private readonly IInfluxService _influxService;
 
     private Task? _timerTask;
     private Task? _eventLoopTask;
 
-    public MyLogic(ILogger<MyLogic> logger, IServiceProvider serviceProvider)
+    public MyLogic(ILogger<MyLogic> logger, IServiceProvider serviceProvider, IInfluxService influxService)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _influxService = influxService;
     }
 
     public async ValueTask DisposeAsync()
@@ -62,13 +66,13 @@ public class MyLogic : IAsyncDisposable
         _eventLoopTask = Task.Run(async () =>
             {
                 try { await EventLoopTaskFunc(eventQueue, devices, _logger, _cts.Token); }
-                catch (Exception e) { _logger.LogCritical(e, "Unhandled error"); }
+                catch (Exception e) { _logger.LogError(e, "Unhandled error"); }
             },
             _cts.Token);
         // @formatter:on
     }
 
-    private static void RegisterEvents(Devices devices, BlockingCollection<LogicEvent> eventQueue)
+    private /*static*/ void RegisterEvents(Devices devices, BlockingCollection<LogicEvent> eventQueue)
     {
         devices.Bathroom.CatScale.PooCountChanged += (_, e)
             => eventQueue.Add(new PooCountChangedEvent(e.PooCount));
@@ -98,10 +102,25 @@ public class MyLogic : IAsyncDisposable
             Console.WriteLine($"MasterMode ChangeRequest {x}");
         };
 
-        //devices.Virtual.MasterModeOverride.ChangeRequest += x =>
+        devices.Virtual.Sensor.DataReceived += Sensor_DataReceived;
+    }
+
+    private /*static*/ void Sensor_DataReceived(object sender, Infrastructure.Zigbee2Mqtt.Devices.Z2MSensorDataReceivedEventArgs eventArgs)
+    {
+        //Console.WriteLine($"Sensor_DataReceived {eventArgs.DeviceId}");
+
+        //foreach (var (key, value) in eventArgs.Values)
         //{
-        //    Console.WriteLine($"MasterModeOverride ChangeRequest {x}");
-        //};
+        //    Console.WriteLine($"  {key} = {value} ({value.GetType().Name})");
+        //}
+
+        var sw = Stopwatch.StartNew();
+
+        _influxService.WriteSensorData(eventArgs.DeviceId, eventArgs.Values);
+
+        sw.Stop();
+        Console.WriteLine($"WriteSensorData ({eventArgs.Values.Count}) took {sw.ElapsedMilliseconds} ms");
+
     }
 
     private static async Task TimerTaskFunc(BlockingCollection<LogicEvent> eventQueue, CancellationToken cancellationToken)
@@ -123,10 +142,11 @@ public class MyLogic : IAsyncDisposable
     {
         var state = CreateState();
 
+        // Propagate the initial state.
+        await ProcessChangedState(state, devices);
+
         try
         {
-            await ProcessChangedState(state, devices);
-
             while (!cancellationToken.IsCancellationRequested)
             {
                 foreach (var @event in eventQueue.GetConsumingEnumerable(cancellationToken))
@@ -146,8 +166,7 @@ public class MyLogic : IAsyncDisposable
 
                         if (@event is not TimerTickEvent)
                         {
-                            logger.LogDebug("Processed event {Event} in {Time} ms", @event,
-                                sw.ElapsedMilliseconds);
+                            logger.LogDebug("Processed event {Event} in {Time} ms", @event, sw.ElapsedMilliseconds);
                         }
                     }
                     catch (Exception e)
@@ -168,9 +187,9 @@ public class MyLogic : IAsyncDisposable
         {
             MasterMode = MasterMode.Awake,
 
-            LivingRoomLightMode = LivingRoomLightMode.Off,
-            KitchenLightMode = KitchenLightMode.Auto,
-            BedroomLightMode = BedroomLightMode.Off,
+            LivingRoomLightMode = LightMode.Auto,
+            KitchenLightMode = LightMode.Auto,
+            BedroomLightMode = LightMode.Auto,
         };
     }
 
@@ -362,23 +381,35 @@ public class MyLogic : IAsyncDisposable
         await UpdateBedroomLights(state, devices);
     }
 
+    private static double GetLightModeLevel(LightMode mode, double autoLevel)
+    {
+        return mode switch
+        {
+            LightMode.Auto => autoLevel,
+
+            LightMode.Off => 0.0,
+            LightMode.Dim25 => 0.25,
+            LightMode.Dim50 => 0.5,
+            LightMode.Dim75 => 0.75,
+            LightMode.Full => 1.0,
+
+            _ => 0.0,
+        };
+    }
+
     private static async Task UpdateLivingRoomLights(State state, Devices devices)
     {
-        double livingRoomLightLevel = state.LivingRoomLightMode switch
-        {
-            LivingRoomLightMode.Dim25 => 0.25d,
-            LivingRoomLightMode.Dim50 => 0.5d,
-            LivingRoomLightMode.Full => 1d,
-            _ => 0d,
-        };
+        double autoLevel = 0.0; // TODO
 
-        if (livingRoomLightLevel > 0.1d)
+        double level = GetLightModeLevel(state.LivingRoomLightMode, autoLevel);
+
+        if (level > 0.01)
         {
-            await devices.LivingRoom.CeilingLight1.TurnOn(brightness: livingRoomLightLevel);
-            await devices.LivingRoom.CeilingLight2.TurnOn(brightness: livingRoomLightLevel);
-            await devices.LivingRoom.CeilingLight3.TurnOn(brightness: livingRoomLightLevel);
-            await devices.LivingRoom.DeskLight.TurnOn(brightness: livingRoomLightLevel);
-            await devices.LivingRoom.Standing.TurnOn(brightness: livingRoomLightLevel);
+            await devices.LivingRoom.CeilingLight1.TurnOn(brightness: level);
+            await devices.LivingRoom.CeilingLight2.TurnOn(brightness: level);
+            await devices.LivingRoom.CeilingLight3.TurnOn(brightness: level);
+            await devices.LivingRoom.DeskLight.TurnOn(brightness: level);
+            await devices.LivingRoom.Standing.TurnOn(brightness: level);
         }
         else
         {
@@ -391,11 +422,11 @@ public class MyLogic : IAsyncDisposable
 
         if (state.LitterBoxIsDirty)
         {
-            await devices.LivingRoom.TvLight.TurnOn(brightness: 0.5d, color: (0.66d, 0.34d));
+            await devices.LivingRoom.TvLight.TurnOn(brightness: 0.5, color: (0.66, 0.34));
         }
-        else if (livingRoomLightLevel > 0.1d)
+        else if (level > 0.01)
         {
-            await devices.LivingRoom.TvLight.TurnOn(brightness: livingRoomLightLevel);
+            await devices.LivingRoom.TvLight.TurnOn(brightness: level);
         }
         else
         {
@@ -405,19 +436,16 @@ public class MyLogic : IAsyncDisposable
 
     private static async Task UpdateKitchenLights(State state, Devices devices)
     {
-        double kitchenLightLevel = state.KitchenLightMode switch
-        {
-            KitchenLightMode.Full => 1d,
-            KitchenLightMode.Auto => (state.KitchenOccupied || state.KitchenOccupancyTimeout > 0) ? 0.5d : 0d,
-            _ => 0d,
-        };
+        double autoLevel = (state.KitchenOccupied || state.KitchenOccupancyTimeout > 0) ? 0.5 : 0.0;
 
-        if (kitchenLightLevel > 0.1d)
+        double level = GetLightModeLevel(state.KitchenLightMode, autoLevel);
+
+        if (level > 0.01)
         {
-            await devices.Kitchen.CeilingLight1.TurnOn(brightness: kitchenLightLevel);
-            await devices.Kitchen.CeilingLight2.TurnOn(brightness: kitchenLightLevel);
-            await devices.Kitchen.CeilingLight3.TurnOn(brightness: kitchenLightLevel);
-            await devices.Kitchen.CeilingLight4.TurnOn(brightness: kitchenLightLevel);
+            await devices.Kitchen.CeilingLight1.TurnOn(brightness: level);
+            await devices.Kitchen.CeilingLight2.TurnOn(brightness: level);
+            await devices.Kitchen.CeilingLight3.TurnOn(brightness: level);
+            await devices.Kitchen.CeilingLight4.TurnOn(brightness: level);
         }
         else
         {
@@ -430,8 +458,8 @@ public class MyLogic : IAsyncDisposable
 
     private static async Task UpdateBedroomLights(State state, Devices devices)
     {
-        var targetBrightness = 0d;
-        var targetTemperature = 1d; // warm light by default
+        var targetBrightness = 0.0;
+        var targetTemperature = 1.0; // warm light by default
 
         switch (state.MasterMode)
         {
@@ -440,13 +468,7 @@ public class MyLogic : IAsyncDisposable
 
             case MasterMode.Awake:
 
-                targetBrightness = state.BedroomLightMode switch
-                {
-                    BedroomLightMode.Off => 0d,
-                    BedroomLightMode.Dim => 0.25d,
-                    BedroomLightMode.Full => 1d,
-                    _ => 0d,
-                };
+                targetBrightness = GetLightModeLevel(state.BedroomLightMode, 0.0);
 
                 break;
 
@@ -459,21 +481,21 @@ public class MyLogic : IAsyncDisposable
 
             case MasterMode.WakingUp:
 
-                targetTemperature = 0d; // cold light
+                targetTemperature = 0.0; // cold light
 
-                if (state.WakingIntensity < 0.99d)
+                if (state.WakingIntensity < 0.99)
                 {
                     targetBrightness = state.WakingIntensity;
                 }
                 else
                 {
-                    targetBrightness = (state.WakingTicks % 2 == 0) ? 1d : 0d;
+                    targetBrightness = (state.WakingTicks % 2 == 0) ? 1.0 : 0.0;
                 }
 
                 break;
         }
 
-        if (targetBrightness > 0.01d)
+        if (targetBrightness > 0.01)
         {
             await devices.Bedroom.StandLight1.TurnOn(brightness: targetBrightness, temperature: targetTemperature);
             await devices.Bedroom.StandLight2.TurnOn(brightness: targetBrightness, temperature: targetTemperature);

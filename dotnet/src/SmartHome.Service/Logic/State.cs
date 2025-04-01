@@ -10,27 +10,48 @@ public enum MasterMode
     Away,
 }
 
-public enum LivingRoomLightMode
+// "Tagged Union"-style
+//public abstract record LightMode();
+//public record LightMode_Auto() : LightMode();
+//public record LightMode_Off() : LightMode();
+//public record LightMode_Manual(double Level) : LightMode();
+
+public enum LightMode
 {
+    Auto,
+
     Off,
     Dim25,
     Dim50,
+    Dim75,
     Full,
-    Auto,
 }
 
-public enum KitchenLightMode
-{
-    Full,
-    Auto,
-}
+//---
 
-public enum BedroomLightMode
-{
-    Off,
-    Dim,
-    Full,
-}
+//public enum LivingRoomLightMode
+//{
+//    Auto,
+
+//    Off,
+//    Dim25,
+//    Dim50,
+//    Dim75,
+//    Full,
+//}
+
+//public enum KitchenLightMode
+//{
+//    Full,
+//    Auto,
+//}
+
+//public enum BedroomLightMode
+//{
+//    Off,
+//    Dim,
+//    Full,
+//}
 
 public struct State
 {
@@ -58,9 +79,9 @@ public struct State
     public bool KitchenOccupied;
     public int KitchenOccupancyTimeout;
 
-    public required LivingRoomLightMode LivingRoomLightMode;
-    public required KitchenLightMode KitchenLightMode;
-    public required BedroomLightMode BedroomLightMode;
+    public required LightMode LivingRoomLightMode;
+    public required LightMode KitchenLightMode;
+    public required LightMode BedroomLightMode;
 
     public State()
     {
