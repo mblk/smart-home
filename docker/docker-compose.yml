@@ -1,6 +1,21 @@
-#version: '3.8'
+###
+### smarthome
+###
 
 services:
+    influxdb2:
+        container_name: influx
+        image: influxdb:2
+        restart: unless-stopped
+        environment:
+            - TZ=Europe/Berlin
+        volumes:
+            - ./influx/data:/var/lib/influxdb2
+            - ./influx/config:/etc/influxdb2
+        ports:
+            - 8086:8086
+        networks:
+            - smarthome
     mosquitto:
         container_name: mosquitto
         image: eclipse-mosquitto:2
