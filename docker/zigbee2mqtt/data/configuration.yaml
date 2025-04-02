@@ -65,3 +65,5 @@ devices:
     friendly_name: dev/kitchen/light/ceiling-3
   '0x00158d0002fdc287':
     friendly_name: dev/kitchen/light/ceiling-4
+  '0x0017880108659078':
+    friendly_name: dev/testing/occupancy-1
