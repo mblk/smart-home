@@ -1,0 +1,8 @@
+bolt-path: /var/lib/influxdb2/influxd.bolt
+engine-path: /var/lib/influxdb2/engine
+nats-port: 4222
+
+session-renew-disabled: true
+session-length: 1440
+
+# session renewal after 1 day
