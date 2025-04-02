@@ -8,60 +8,60 @@ services:
         image: influxdb:2
         restart: unless-stopped
         environment:
-            - TZ=Europe/Berlin
+          - TZ=Europe/Berlin
         volumes:
-            - ./influx/data:/var/lib/influxdb2
-            - ./influx/config:/etc/influxdb2
+          - ./influx/data:/var/lib/influxdb2
+          - ./influx/config:/etc/influxdb2
         ports:
-            - 8086:8086
+          - 8086:8086
         networks:
-            - smarthome
+          - smarthome
     mosquitto:
         container_name: mosquitto
         image: eclipse-mosquitto:2
         restart: unless-stopped
         environment:
-            - TZ=Europe/Berlin
+          - TZ=Europe/Berlin
         volumes:
-            - ./mosquitto/config:/mosquitto/config
-            - ./mosquitto/data:/mosquitto/data
-            - ./mosquitto/log:/mosquitto/log
+          - ./mosquitto/config:/mosquitto/config
+          - ./mosquitto/data:/mosquitto/data
+          - ./mosquitto/log:/mosquitto/log
         ports:
-            - 1883:1883
-            #- 8883:8883
-            #- 9001:9001
+          - 1883:1883
+          #- 8883:8883
+          #- 9001:9001
         networks:
-            - smarthome
+          - smarthome
     zigbee2mqtt:
         container_name: zigbee2mqtt
         image: koenkk/zigbee2mqtt
         restart: unless-stopped
         environment:
-            - TZ=Europe/Berlin
+          - TZ=Europe/Berlin
         volumes:
-            - ./zigbee2mqtt/data:/app/data
-            - /run/udev:/run/udev:ro
+          - ./zigbee2mqtt/data:/app/data
+          - /run/udev:/run/udev:ro
         ports:
-            - 8080:8080
+          - 8080:8080
         devices:
-            - /dev/serial/by-id/usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II_DE2253799-if00:/dev/ttyACM0
+          - /dev/serial/by-id/usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II_DE2253799-if00:/dev/ttyACM0
         networks:
-            - smarthome
+          - smarthome
     smarthome.service:
         container_name: smarthome.service
         image: smarthome.service
         restart: unless-stopped
         environment:
-            - TZ=Europe/Berlin
-            - MQTT__Server=mosquitto
-            - MQTT__Port=1883
-            - CatScale__Endpoint=https://mblk.info
-            - Influx__Url=http://influx:8086
-            - Influx__Token=m8W7Cg4yO48I6xGJx9iYWsmDFSLE6E-8C1q2YXvhY5zpchM8o9MqPZe_I14RY0CF1pVmFZDx0Fv1lhh0Pg-VGQ== # TODO use secret. no security issue, only used on internal network
-            - Influx__Org=org
-            - Influx__Bucket=test1
+          - TZ=Europe/Berlin
+          - MQTT__Server=mosquitto
+          - MQTT__Port=1883
+          - CatScale__Endpoint=https://mblk.info
+          - Influx__Url=http://influx:8086
+          - Influx__Token=m8W7Cg4yO48I6xGJx9iYWsmDFSLE6E-8C1q2YXvhY5zpchM8o9MqPZe_I14RY0CF1pVmFZDx0Fv1lhh0Pg-VGQ== # TODO use secret. no security issue, only used on internal network
+          - Influx__Org=org
+          - Influx__Bucket=test1
         networks:
-            - smarthome
+          - smarthome
         build:
             context: ../dotnet/
             dockerfile: ../dotnet/src/SmartHome.Service/Dockerfile
@@ -70,14 +70,14 @@ services:
         image: smarthome.ui.blazor
         restart: unless-stopped
         environment:
-            - TZ=Europe/Berlin
-            - MQTT__Server=mosquitto
-            - MQTT__Port=1883
-            - DOTNET_URLS=http://*:8081
+          - TZ=Europe/Berlin
+          - MQTT__Server=mosquitto
+          - MQTT__Port=1883
+          - DOTNET_URLS=http://*:8081
         ports:
-            - 8081:8081
+          - 8081:8081
         networks:
-            - smarthome
+          - smarthome
         build:
             context: ../dotnet/
             dockerfile: ../dotnet/src/SmartHome.UI.Blazor/Dockerfile
