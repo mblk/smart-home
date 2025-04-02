@@ -54,7 +54,7 @@ public class SunSensor : ISunSensor
                 Console.WriteLine($"Error: {e}");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(10));
+            await Task.Delay(TimeSpan.FromSeconds(30)); // TODO set via config?
         }
     }
 

@@ -94,7 +94,15 @@ public class MyLogic : IAsyncDisposable
 
         devices.Virtual.Sun.SunStateChanged += (_, s) =>
         {
-            Console.WriteLine($"SunStateChanged: {s}");
+            //Console.WriteLine($"SunStateChanged: {s}");
+
+            var values = new Dictionary<string, object>
+            {
+                { "altitude", s.AltDeg },
+                { "azimuth", s.AzDeg }
+            };
+
+            _influxService.WriteSensorData("sun", values);
         };
 
         devices.Virtual.MasterMode.ChangeRequest += x =>
@@ -277,6 +285,13 @@ public class MyLogic : IAsyncDisposable
 
     private static State ProcessButtonEvent(State state, ButtonPressEvent e)
     {
+        static LightMode getNextLightMode(LightMode currentMode, LightMode maxMode)
+        {
+            if (currentMode == LightMode.Auto)
+                return maxMode;
+            return LightMode.Auto;
+        }
+
         switch (e.Button)
         {
             case "kitchen":
@@ -290,11 +305,11 @@ public class MyLogic : IAsyncDisposable
                     switch (e.Action)
                     {
                         case "button_1_single":
-                            state.LivingRoomLightMode = state.LivingRoomLightMode.Next();
+                            state.LivingRoomLightMode = getNextLightMode(state.LivingRoomLightMode, LightMode.Full);
                             break;
 
                         case "button_2_single":
-                            state.KitchenLightMode = state.KitchenLightMode.Next();
+                            state.KitchenLightMode = getNextLightMode(state.KitchenLightMode, LightMode.Full);
                             break;
 
                         case "button_3_single":
@@ -316,7 +331,7 @@ public class MyLogic : IAsyncDisposable
                 switch (e.Action)
                 {
                     case "button_1_single":
-                        state.BedroomLightMode = state.BedroomLightMode.Next();
+                        state.BedroomLightMode = getNextLightMode(state.BedroomLightMode, LightMode.Dim50);
                         break;
 
                     case "button_2_single":
@@ -370,7 +385,6 @@ public class MyLogic : IAsyncDisposable
     private static async Task ProcessChangedState(State state, Devices devices)
     {
         await devices.Virtual.MasterMode.Update(state.MasterMode);
-        //await devices.Virtual.MasterModeOverride.Update(state.MasterModeOverride);
 
         await devices.Virtual.LivingRoomLightMode.Update(state.LivingRoomLightMode);
         await devices.Virtual.KitchenLightMode.Update(state.KitchenLightMode);

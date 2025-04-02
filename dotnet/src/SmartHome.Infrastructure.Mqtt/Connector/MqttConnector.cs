@@ -56,7 +56,7 @@ public class MqttConnector : IMqttConnector
             // + single level wildcard
             // # multi level wildcard
 
-            Console.WriteLine($"ApplicationMessageReceivedAsync filter={topic}, actual={ea.ApplicationMessage.Topic}");
+            //Console.WriteLine($"ApplicationMessageReceivedAsync filter={topic}, actual={ea.ApplicationMessage.Topic}");
 
             //if (ea.ApplicationMessage.Topic == topic)
             {
