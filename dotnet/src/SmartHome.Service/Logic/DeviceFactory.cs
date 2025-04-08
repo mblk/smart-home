@@ -11,6 +11,8 @@ public static class DeviceFactory
 {
     public static async Task<Devices> CreateDevices(IServiceProvider serviceProvider)
     {
+        var sunSensor = new SunSensor();
+
         var catScaleSensor = serviceProvider.GetRequiredService<ICatScaleSensor>();
         var mqttConnector = serviceProvider.GetRequiredService<IMqttConnector>();
         var z2MDiscoverer = serviceProvider.GetRequiredService<IZ2MDeviceDiscoverer>();
@@ -24,7 +26,8 @@ public static class DeviceFactory
         {
             Virtual = new VirtualDevices
             {
-                Sun = new SunSensor(),
+                Sun = sunSensor,
+                LivingRoomLightEstimator = new RoomLightEstimator(sunSensor),
 
                 MasterMode = new MqttSharedState<MasterMode>(mqttConnector, "state", "master"),
 

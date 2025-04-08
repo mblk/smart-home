@@ -99,10 +99,27 @@ public class MyLogic : IAsyncDisposable
             var values = new Dictionary<string, object>
             {
                 { "altitude", s.AltDeg },
-                { "azimuth", s.AzDeg }
+                { "direction", s.DirDeg }
             };
 
             _influxService.WriteSensorData("sun", values);
+        };
+
+        devices.Virtual.LivingRoomLightEstimator.RoomLightEstimateChanged += (_, s) =>
+        {
+            //Console.WriteLine($"RoomLightEstimateChanged: {s}");
+
+            var values = new Dictionary<string, object>
+            {
+                { "alpha", s.AlphaRad },
+                { "theta", s.ThetaRad },
+                { "direct_factor", s.DirectLightFactor },
+                { "diffuse_factor", s.DiffuseLightFactor },
+                { "irradiance", s.Irradiance },
+                { "illuminance", s.Illuminance },
+            };
+
+            _influxService.WriteSensorData("livingroom/light_estimator", values);
         };
 
         devices.Virtual.MasterMode.ChangeRequest += x =>

@@ -15,7 +15,7 @@ public delegate void SunStateChangedEventHandler(object sender, SunState newSunS
 
 public record SunState(
     double AltDeg,
-    double AzDeg,
+    double DirDeg,
     TimeOnly SunriseTimeLocal,
     TimeOnly SolarNoonTimeLocal,
     TimeOnly SunsetTimeLocal);
@@ -54,7 +54,7 @@ public class SunSensor : ISunSensor
                 Console.WriteLine($"Error: {e}");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30)); // TODO set via config?
+            await Task.Delay(TimeSpan.FromSeconds(5)); // TODO set via config?
         }
     }
 
@@ -79,7 +79,7 @@ public class SunSensor : ISunSensor
         var sunPos = SunCalc.GetSunPosition(time, config.Lat, config.Long);
 
         var sunAltDeg = sunPos.Altitude.Rad2Deg();
-        var sunAzDeg = sunPos.Azimuth.Rad2Deg();
+        var sunDirDeg = (sunPos.Azimuth.Rad2Deg() + 180.0).Normalize(0.0, 360.0); // this is now the direction to the sun.
 
         var sunPhases = SunCalc.GetSunPhases(time, config.Lat, config.Long).ToArray();
 
@@ -93,7 +93,7 @@ public class SunSensor : ISunSensor
 
         return new SunState(
             AltDeg: sunAltDeg,
-            AzDeg: sunAzDeg,
+            DirDeg: sunDirDeg,
             SunriseTimeLocal: sunriseTime,
             SolarNoonTimeLocal: solarNoonTime,
             SunsetTimeLocal: sunsetTime

@@ -17,6 +17,7 @@ public class Devices
 public class VirtualDevices
 {
     public required ISunSensor Sun;
+    public required IRoomLightEstimator LivingRoomLightEstimator;
 
     public required IMqttSharedState<MasterMode> MasterMode;
 
