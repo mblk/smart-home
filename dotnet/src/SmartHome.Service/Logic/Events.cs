@@ -7,10 +7,10 @@ public abstract record LogicEvent;
 public record TimerTickEvent : LogicEvent;
 
 public record PooCountChangedEvent(int PooCount) : LogicEvent;
-
 public record ButtonPressEvent(string Button, string Action) : LogicEvent;
-
 public record OccupancySensorEvent(string Sensor, bool Occupancy) : LogicEvent;
+
+public record ChangeMasterMode(MasterMode Mode) : LogicEvent;
 
 public record ChangeLivingRoomLightMode(LightMode Mode) : LogicEvent;
 public record ChangeKitchenLightMode(LightMode Mode) : LogicEvent;

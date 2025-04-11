@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using InfluxDB.Client.Api.Service;
 using SmartHome.Infrastructure.Influx.Services;
 using SmartHome.Utils;
 
@@ -8,6 +7,15 @@ namespace SmartHome.Service.Logic;
 
 public class MyLogic : IAsyncDisposable
 {
+    private static readonly (MasterMode, MasterMode)[] _legalExternalMasterModeTransitions =
+    [
+        (MasterMode.Awake, MasterMode.GoingToBed),
+        (MasterMode.GoingToBed, MasterMode.Awake),
+
+        (MasterMode.Awake, MasterMode.Away),
+        (MasterMode.Away, MasterMode.Awake),
+    ];
+
     private readonly CancellationTokenSource _cts = new();
 
     private readonly ILogger<MyLogic> _logger;
@@ -26,7 +34,6 @@ public class MyLogic : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        // @formatter:off
         try { _cts.Cancel(); }
         catch (Exception e) { _logger.LogError(e, "Failed to cancel"); }
 
@@ -43,20 +50,20 @@ public class MyLogic : IAsyncDisposable
             try { await eventLoopTask; }
             catch (Exception e) { _logger.LogError(e, "Failed to await event-loop-task"); }
         }
-        // @formatter:on
     }
 
     public async Task Start(CancellationToken startingCancellationToken = default)
     {
+        _ = startingCancellationToken;
+
         var devices = await DeviceFactory.CreateDevices(_serviceProvider);
 
         var eventQueue = new BlockingCollection<LogicEvent>();
-        RegisterEvents(devices, eventQueue);
+        RegisterEvents(devices, eventQueue, _influxService);
 
         devices.Bathroom.CatScale.Start();
         devices.Virtual.Sun.Start();
 
-        // @formatter:off
         _timerTask = Task.Run(async () =>
             {
                 try { await TimerTaskFunc(eventQueue, _cts.Token); }
@@ -70,10 +77,9 @@ public class MyLogic : IAsyncDisposable
                 catch (Exception e) { _logger.LogError(e, "Unhandled error"); }
             },
             _cts.Token);
-        // @formatter:on
     }
 
-    private /*static*/ void RegisterEvents(Devices devices, BlockingCollection<LogicEvent> eventQueue)
+    private static void RegisterEvents(Devices devices, BlockingCollection<LogicEvent> eventQueue, IInfluxService influxService)
     {
         devices.Bathroom.CatScale.PooCountChanged += (_, e)
             => eventQueue.Add(new PooCountChangedEvent(e.PooCount));
@@ -95,8 +101,6 @@ public class MyLogic : IAsyncDisposable
 
         devices.Virtual.Sun.SunStateChanged += (_, s) =>
         {
-            //Console.WriteLine($"SunStateChanged: {s}");
-
             eventQueue.Add(new SunStateChangedEvent(s));
 
             var values = new Dictionary<string, object>
@@ -105,13 +109,11 @@ public class MyLogic : IAsyncDisposable
                 { "direction", s.DirDeg }
             };
 
-            _influxService.WriteSensorData("sun", values);
+            influxService.WriteSensorData("sun", values);
         };
 
         devices.Virtual.LivingRoomLightEstimator.RoomLightEstimateChanged += (_, s) =>
         {
-            //Console.WriteLine($"RoomLightEstimateChanged: {s}");
-
             eventQueue.Add(new RoomLightEstimateChangedEvent(s));
 
             var values = new Dictionary<string, object>
@@ -125,32 +127,20 @@ public class MyLogic : IAsyncDisposable
                 { "illuminance", s.Illuminance },
             };
 
-            _influxService.WriteSensorData("livingroom/light_estimator", values);
+            influxService.WriteSensorData("livingroom/light_estimator", values);
         };
 
         devices.Virtual.MasterMode.ChangeRequest += x =>
         {
             Console.WriteLine($"MasterMode ChangeRequest {x}");
+
+            if (x != null) eventQueue.Add(new ChangeMasterMode(x.Value));
         };
 
-        devices.Virtual.Sensor.DataReceived += Sensor_DataReceived;
-    }
-
-    private /*static*/ void Sensor_DataReceived(object sender, Infrastructure.Zigbee2Mqtt.Devices.Z2MSensorDataReceivedEventArgs eventArgs)
-    {
-        //Console.WriteLine($"Sensor_DataReceived {eventArgs.DeviceId}");
-
-        //foreach (var (key, value) in eventArgs.Values)
-        //{
-        //    Console.WriteLine($"  {key} = {value} ({value.GetType().Name})");
-        //}
-
-        //var sw = Stopwatch.StartNew();
-
-        _influxService.WriteSensorData(eventArgs.DeviceId, eventArgs.Values);
-
-        //sw.Stop();
-        //Console.WriteLine($"WriteSensorData ({eventArgs.Values.Count}) took {sw.ElapsedMilliseconds} ms");
+        devices.Virtual.Sensor.DataReceived += (_, s) =>
+        {
+            influxService.WriteSensorData(s.DeviceId, s.Values);
+        };
     }
 
     private static async Task TimerTaskFunc(BlockingCollection<LogicEvent> eventQueue, CancellationToken cancellationToken)
@@ -239,6 +229,9 @@ public class MyLogic : IAsyncDisposable
             case OccupancySensorEvent occupancySensorEvent:
                 return ProcessOccupancySensorEvent(state, occupancySensorEvent);
 
+            case ChangeMasterMode changeMasterMode:
+                return ProcessChangeMasterModeRequest(state, changeMasterMode.Mode);
+
             case ChangeLivingRoomLightMode changeLivingRoomLightMode:
                 state.LivingRoomLightMode = changeLivingRoomLightMode.Mode;
                 return state;
@@ -265,6 +258,40 @@ public class MyLogic : IAsyncDisposable
         }
     }
 
+    private static State ProcessChangeMasterModeRequest(State state, MasterMode newMode)
+    {
+        if (_legalExternalMasterModeTransitions.Any(x => x.Item1 == state.MasterMode && x.Item2 == newMode))
+        {
+            state = ChangeMasterMode(state, newMode);
+        }
+        else
+        {
+            Console.WriteLine($"MasterMode change not allowed: {state.MasterMode} -> {newMode}");
+        }
+
+        return state;
+    }
+
+    private static State ChangeMasterMode(State state, MasterMode newMode)
+    {
+        state.MasterMode = newMode;
+
+        if (newMode == MasterMode.WakingUp)
+        {
+            state.WakingIntensity = 0d;
+            state.WakingTicks = 0;
+        }
+
+        // Set everything to auto on master mode-changes.
+        //      XXX not sure if this makes sense yet...
+        //      XXX maybe the light mode should have more authority than the master mode
+        state.LivingRoomLightMode = LightMode.Auto;
+        state.KitchenLightMode = LightMode.Auto;
+        state.BedroomLightMode = LightMode.Auto;
+
+        return state;
+    }
+
     private static State ProcessTimerTickEvent(State state, TimerTickEvent e)
     {
         _ = e;
@@ -276,10 +303,7 @@ public class MyLogic : IAsyncDisposable
 
             if (wakeTime <= timeNow && timeNow < wakeTime.AddMinutes(5))
             {
-                state.MasterMode = MasterMode.WakingUp;
-
-                state.WakingIntensity = 0d;
-                state.WakingTicks = 0;
+                state = ChangeMasterMode(state, MasterMode.WakingUp);
             }
         }
 
@@ -323,10 +347,9 @@ public class MyLogic : IAsyncDisposable
         switch (e.Button)
         {
             case "kitchen":
-
                 if (state.MasterMode == MasterMode.WakingUp)
                 {
-                    state.MasterMode = MasterMode.Awake;
+                    state = ChangeMasterMode(state, MasterMode.Awake);
                 }
                 else
                 {
@@ -343,11 +366,11 @@ public class MyLogic : IAsyncDisposable
                         case "button_3_single":
                             if (state.MasterMode == MasterMode.Awake)
                             {
-                                state.MasterMode = MasterMode.GoingToBed;
+                                state = ChangeMasterMode(state, MasterMode.GoingToBed);
                             }
                             else if (state.MasterMode == MasterMode.GoingToBed)
                             {
-                                state.MasterMode = MasterMode.Awake;
+                                state = ChangeMasterMode(state, MasterMode.Awake);
                             }
                             break;
                     }
@@ -368,18 +391,18 @@ public class MyLogic : IAsyncDisposable
                     case "button_3_single":
                         if (state.MasterMode == MasterMode.Awake)
                         {
-                            state.MasterMode = MasterMode.GoingToBed;
+                            state = ChangeMasterMode(state, MasterMode.GoingToBed);
                         }
                         else if (state.MasterMode == MasterMode.GoingToBed)
                         {
-                            state.MasterMode = MasterMode.Awake;
+                            state = ChangeMasterMode(state, MasterMode.Awake);
                         }
                         break;
 
                     case "button_4_single":
                         if (state.MasterMode == MasterMode.GoingToBed)
                         {
-                            state.MasterMode = MasterMode.Sleeping;
+                            state = ChangeMasterMode(state, MasterMode.Sleeping);
                         }
                         break;
                 }
