@@ -54,7 +54,7 @@ public class SunSensor : ISunSensor
                 Console.WriteLine($"Error: {e}");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5)); // TODO set via config?
+            await Task.Delay(TimeSpan.FromSeconds(30)); // TODO set via config?
         }
     }
 
@@ -70,7 +70,7 @@ public class SunSensor : ISunSensor
         }
     }
 
-    private static SunState GetSunState(SunSensorConfig config, DateTime time)
+    public static SunState GetSunState(SunSensorConfig config, DateTime time)
     {
         // GetSunPosition() Returns:
         // altitude: sun altitude above the horizon in radians, e.g. 0 at the horizon and PI / 2 at the zenith(straight over your head)

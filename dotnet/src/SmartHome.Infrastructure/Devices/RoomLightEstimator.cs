@@ -1,4 +1,5 @@
 ﻿using SmartHome.Utils;
+using System.Diagnostics;
 
 namespace SmartHome.Infrastructure.Devices;
 
@@ -20,6 +21,7 @@ public record RoomLightEstimate(
     double ThetaRad,
     double DirectLightFactor, // 0..1
     double DiffuseLightFactor, // 0..1
+    double TotalLightFactor, // 0..1
     double Irradiance, // W/m^2
     double Illuminance // Lx
     );
@@ -57,7 +59,7 @@ public class RoomLightEstimator : IRoomLightEstimator
         }
     }
 
-    private static RoomLightEstimate EstimateRoomLight(SunState sunState, RoomLightConfig config)
+    public static RoomLightEstimate EstimateRoomLight(SunState sunState, RoomLightConfig config)
     {
         var sunElevationRad = sunState.AltDeg.Deg2Rad(); // -90..+90, realisticly -45..+45 at my location
         var sunDirectionRad = sunState.DirDeg.Deg2Rad(); // [0..360), 0=north
@@ -67,11 +69,12 @@ public class RoomLightEstimator : IRoomLightEstimator
         var thetaRad = MathExtensions.NormalizedAngleDiffRad(sunDirectionRad, windowDirectionRad);
 
         var directLightFactor = Math.Max(0.0, Math.Sin(alphaRad)) * Math.Max(0.0, Math.Cos(thetaRad)); // 0..1
-        var diffuseLightFactor = Math.Max(0, 0.1 + 0.2 * Math.Sin(alphaRad)); // 0..0.3
+        var diffuseLightFactor = EstimateDiffuseLightFactor(sunState.AltDeg);
+        var totalLightFactor = (directLightFactor + diffuseLightFactor).Clamp(0.0, 1.0);
 
         var solarIrradiance = 1000.0; // W/m^2
 
-        var roomIrradiance = (directLightFactor + diffuseLightFactor) * solarIrradiance * config.WindowArea * config.WindowTransmission; // W/m^2
+        var roomIrradiance = totalLightFactor * solarIrradiance * config.WindowArea * config.WindowTransmission; // W/m^2
 
         const double luxPerWatt = 120.0; // approx for sunlight
         var illuminance = roomIrradiance * luxPerWatt; // lx
@@ -81,12 +84,36 @@ public class RoomLightEstimator : IRoomLightEstimator
             ThetaRad: thetaRad,
             DirectLightFactor: directLightFactor,
             DiffuseLightFactor: diffuseLightFactor,
+            TotalLightFactor: totalLightFactor,
             Irradiance: roomIrradiance,
             Illuminance: illuminance
             );
     }
 
+    private static double EstimateDiffuseLightFactor(double sunAltDeg)
+    {
+        const double maxDiffuseFactor1 = 0.1;
+        const double maxDiffuseFactor2 = 0.4;
 
+        if (sunAltDeg < -6.0)
+        {
+            return 0.0;
+        }
+        else if (sunAltDeg < 0.0) // -6 .. 0
+        {
+            var t = (sunAltDeg + 6.0) / 6.0; // 0..1
+            Debug.Assert(0.0 <= t && t <= 1.0);
+
+            return t * maxDiffuseFactor1;
+        }
+        else
+        {
+            var t = Math.Min(1.0, sunAltDeg / 30.0);              // bis 30° Sonnenhöhe linear aufbauen
+            Debug.Assert(0.0 <= t && t <= 1.0);
+
+            return maxDiffuseFactor1 + t * maxDiffuseFactor2;       // geht langsam von 0.3 → 0.5
+        }
+    }
 }
 
 

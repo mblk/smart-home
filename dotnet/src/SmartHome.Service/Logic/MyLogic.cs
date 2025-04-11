@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using InfluxDB.Client.Api.Service;
 using SmartHome.Infrastructure.Influx.Services;
 using SmartHome.Utils;
 
@@ -96,6 +97,8 @@ public class MyLogic : IAsyncDisposable
         {
             //Console.WriteLine($"SunStateChanged: {s}");
 
+            eventQueue.Add(new SunStateChangedEvent(s));
+
             var values = new Dictionary<string, object>
             {
                 { "altitude", s.AltDeg },
@@ -109,12 +112,15 @@ public class MyLogic : IAsyncDisposable
         {
             //Console.WriteLine($"RoomLightEstimateChanged: {s}");
 
+            eventQueue.Add(new RoomLightEstimateChangedEvent(s));
+
             var values = new Dictionary<string, object>
             {
                 { "alpha", s.AlphaRad },
                 { "theta", s.ThetaRad },
                 { "direct_factor", s.DirectLightFactor },
                 { "diffuse_factor", s.DiffuseLightFactor },
+                { "total_factor", s.TotalLightFactor },
                 { "irradiance", s.Irradiance },
                 { "illuminance", s.Illuminance },
             };
@@ -139,13 +145,12 @@ public class MyLogic : IAsyncDisposable
         //    Console.WriteLine($"  {key} = {value} ({value.GetType().Name})");
         //}
 
-        var sw = Stopwatch.StartNew();
+        //var sw = Stopwatch.StartNew();
 
         _influxService.WriteSensorData(eventArgs.DeviceId, eventArgs.Values);
 
-        sw.Stop();
-        Console.WriteLine($"WriteSensorData ({eventArgs.Values.Count}) took {sw.ElapsedMilliseconds} ms");
-
+        //sw.Stop();
+        //Console.WriteLine($"WriteSensorData ({eventArgs.Values.Count}) took {sw.ElapsedMilliseconds} ms");
     }
 
     private static async Task TimerTaskFunc(BlockingCollection<LogicEvent> eventQueue, CancellationToken cancellationToken)
@@ -246,6 +251,14 @@ public class MyLogic : IAsyncDisposable
                 state.BedroomLightMode = changeBedroomLightMode.Mode;
                 return state;
 
+            case SunStateChangedEvent sunStateChangedEvent:
+                state.SunState = sunStateChangedEvent.SunState;
+                return state;
+
+            case RoomLightEstimateChangedEvent roomLightEstimateChangedEvent:
+                state.LivingRoomLightEstimate = roomLightEstimateChangedEvent.Estimate;
+                return state;
+
             default:
                 Console.WriteLine($"Unknown logic event: {@event} ({@event.GetType().Name})");
                 return state;
@@ -256,7 +269,6 @@ public class MyLogic : IAsyncDisposable
     {
         _ = e;
 
-        // ---
         if (state.MasterMode == MasterMode.Sleeping)
         {
             var timeNow = TimeOnly.FromDateTime(DateTime.Now);
@@ -270,7 +282,7 @@ public class MyLogic : IAsyncDisposable
                 state.WakingTicks = 0;
             }
         }
-        // ---
+
         if (state.MasterMode == MasterMode.WakingUp)
         {
             var timeNow = TimeOnly.FromDateTime(DateTime.Now);
@@ -279,7 +291,6 @@ public class MyLogic : IAsyncDisposable
             state.WakingIntensity = (wakingTime / state.WakeUpPeriod).Clamp(0d, 1d);
             state.WakingTicks++;
         }
-        // ---
 
         if (state.KitchenOccupied)
         {
@@ -412,35 +423,51 @@ public class MyLogic : IAsyncDisposable
         await UpdateBedroomLights(state, devices);
     }
 
-    private static double GetLightModeLevel(LightMode mode, double autoLevel)
+    private static double CalculateLivingRoomAutoLightLevel(State state)
     {
-        return mode switch
-        {
-            LightMode.Auto => autoLevel,
+        const double threshold = 0.25; // slowly turn on lights below this factor
+        const double maxBrightness = 0.5;
 
-            LightMode.Off => 0.0,
-            LightMode.Dim25 => 0.25,
-            LightMode.Dim50 => 0.5,
-            LightMode.Dim75 => 0.75,
-            LightMode.Full => 1.0,
+        if (state.LivingRoomLightEstimate == null)
+            return 0.0;
 
-            _ => 0.0,
-        };
+        var f = state.LivingRoomLightEstimate.TotalLightFactor; // 0..1
+
+        if (f >= threshold)
+            return 0.0;
+        
+        var t = (threshold - f) / threshold; // 0..1
+        Debug.Assert(0.0 <= t && t <= 1.0);
+
+        return t * maxBrightness; // 0..0.5
     }
 
     private static async Task UpdateLivingRoomLights(State state, Devices devices)
     {
-        double autoLevel = 0.0; // TODO
-
-        double level = GetLightModeLevel(state.LivingRoomLightMode, autoLevel);
-
-        if (level > 0.01)
+        double getAwakeBrightness()
         {
-            await devices.LivingRoom.CeilingLight1.TurnOn(brightness: level);
-            await devices.LivingRoom.CeilingLight2.TurnOn(brightness: level);
-            await devices.LivingRoom.CeilingLight3.TurnOn(brightness: level);
-            await devices.LivingRoom.DeskLight.TurnOn(brightness: level);
-            await devices.LivingRoom.Standing.TurnOn(brightness: level);
+            double autoLevel = CalculateLivingRoomAutoLightLevel(state);
+
+            return state.LivingRoomLightMode.GetBrightness(autoLevel);
+        }
+
+        double targetBrightness = state.MasterMode switch
+        {
+            MasterMode.Away => 0.0,
+            MasterMode.Awake => getAwakeBrightness(),
+            MasterMode.GoingToBed => 0.0,
+            MasterMode.Sleeping => 0.0,
+            MasterMode.WakingUp => 0.0,
+            _ => 0.0,
+        };
+
+        if (targetBrightness > 0.01)
+        {
+            await devices.LivingRoom.CeilingLight1.TurnOn(brightness: targetBrightness);
+            await devices.LivingRoom.CeilingLight2.TurnOn(brightness: targetBrightness);
+            await devices.LivingRoom.CeilingLight3.TurnOn(brightness: targetBrightness);
+            await devices.LivingRoom.DeskLight.TurnOn(brightness: targetBrightness);
+            await devices.LivingRoom.Standing.TurnOn(brightness: targetBrightness);
         }
         else
         {
@@ -455,9 +482,9 @@ public class MyLogic : IAsyncDisposable
         {
             await devices.LivingRoom.TvLight.TurnOn(brightness: 0.5, color: (0.66, 0.34));
         }
-        else if (level > 0.01)
+        else if (targetBrightness > 0.01)
         {
-            await devices.LivingRoom.TvLight.TurnOn(brightness: level);
+            await devices.LivingRoom.TvLight.TurnOn(brightness: targetBrightness);
         }
         else
         {
@@ -467,16 +494,37 @@ public class MyLogic : IAsyncDisposable
 
     private static async Task UpdateKitchenLights(State state, Devices devices)
     {
-        double autoLevel = (state.KitchenOccupied || state.KitchenOccupancyTimeout > 0) ? 0.5 : 0.0;
-
-        double level = GetLightModeLevel(state.KitchenLightMode, autoLevel);
-
-        if (level > 0.01)
+        double getAwayBrightness()
         {
-            await devices.Kitchen.CeilingLight1.TurnOn(brightness: level);
-            await devices.Kitchen.CeilingLight2.TurnOn(brightness: level);
-            await devices.Kitchen.CeilingLight3.TurnOn(brightness: level);
-            await devices.Kitchen.CeilingLight4.TurnOn(brightness: level);
+            double f = state.LivingRoomLightEstimate?.TotalLightFactor ?? 0.0;
+            if (f > 0.25)
+                return 0.0;
+            return 0.25; // cat-light
+        }
+
+        double getAwakeBrightness()
+        {
+            double autoLevel = (state.KitchenOccupied || state.KitchenOccupancyTimeout > 0) ? 0.5 : 0.0;
+
+            return state.KitchenLightMode.GetBrightness(autoLevel);
+        }
+
+        double targetBrightness = state.MasterMode switch
+        {
+            MasterMode.Away => getAwayBrightness(),
+            MasterMode.Awake => getAwakeBrightness(),
+            MasterMode.GoingToBed => 0.25,
+            MasterMode.Sleeping => 0.0,
+            MasterMode.WakingUp => 0.25,
+            _ => 0.0,
+        };
+
+        if (targetBrightness > 0.01)
+        {
+            await devices.Kitchen.CeilingLight1.TurnOn(brightness: targetBrightness);
+            await devices.Kitchen.CeilingLight2.TurnOn(brightness: targetBrightness);
+            await devices.Kitchen.CeilingLight3.TurnOn(brightness: targetBrightness);
+            await devices.Kitchen.CeilingLight4.TurnOn(brightness: targetBrightness);
         }
         else
         {
@@ -489,42 +537,33 @@ public class MyLogic : IAsyncDisposable
 
     private static async Task UpdateBedroomLights(State state, Devices devices)
     {
-        var targetBrightness = 0.0;
-        var targetTemperature = 1.0; // warm light by default
-
-        switch (state.MasterMode)
+        double getWakingUpBrightness()
         {
-            case MasterMode.Away:
-                break;
-
-            case MasterMode.Awake:
-
-                targetBrightness = GetLightModeLevel(state.BedroomLightMode, 0.0);
-
-                break;
-
-            case MasterMode.GoingToBed:
-                targetBrightness = 0.25;
-                break;
-
-            case MasterMode.Sleeping:
-                break;
-
-            case MasterMode.WakingUp:
-
-                targetTemperature = 0.0; // cold light
-
-                if (state.WakingIntensity < 0.99)
-                {
-                    targetBrightness = state.WakingIntensity;
-                }
-                else
-                {
-                    targetBrightness = (state.WakingTicks % 2 == 0) ? 1.0 : 0.0;
-                }
-
-                break;
+            if (state.WakingIntensity < 0.99)
+            {
+                return state.WakingIntensity;
+            }
+            else
+            {
+                return (state.WakingTicks % 2 == 0) ? 1.0 : 0.0;
+            }
         }
+
+        double targetTemperature = state.MasterMode switch
+        {
+            MasterMode.WakingUp => 0.0, // cold
+            _ => 1.0, // warm
+        };
+
+        double targetBrightness = state.MasterMode switch
+        {
+            MasterMode.Away => 0.0,
+            MasterMode.Awake => state.BedroomLightMode.GetBrightness(0.0),
+            MasterMode.GoingToBed => 0.25,
+            MasterMode.Sleeping => 0.0,
+            MasterMode.WakingUp => getWakingUpBrightness(),
+            _ => 0.0,
+        };
 
         if (targetBrightness > 0.01)
         {

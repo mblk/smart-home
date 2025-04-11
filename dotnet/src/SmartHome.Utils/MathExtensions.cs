@@ -38,7 +38,16 @@ public static class MathExtensions
 
     public static double Lerp(double a, double b, double t)
     {
+        Debug.Assert(0.0 <= t && t <= 1.0);
+
         return a + (b - a) * t.Clamp(0d, 1d);
+    }
+
+    public static double SmoothStep(this double t)
+    {
+        Debug.Assert(0.0 <= t && t <= 1.0);
+
+        return t * t * (3 - 2 * t);
     }
 
     public static double NormalizedAngleDiffDeg(double angle1, double angle2)

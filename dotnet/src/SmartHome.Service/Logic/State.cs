@@ -1,3 +1,5 @@
+using SmartHome.Infrastructure.Devices;
+
 namespace SmartHome.Service.Logic;
 
 public enum MasterMode
@@ -27,37 +29,38 @@ public enum LightMode
     Full,
 }
 
-//---
+public static class LightModeExtensions
+{
+    public static double GetBrightness(this LightMode mode, double autoLevel)
+    {
+        return mode switch
+        {
+            LightMode.Auto => autoLevel,
 
-//public enum LivingRoomLightMode
-//{
-//    Auto,
+            LightMode.Off => 0.0,
+            LightMode.Dim25 => 0.25,
+            LightMode.Dim50 => 0.5,
+            LightMode.Dim75 => 0.75,
+            LightMode.Full => 1.0,
 
-//    Off,
-//    Dim25,
-//    Dim50,
-//    Dim75,
-//    Full,
-//}
+            _ => 0.0,
+        };
+    }
+}
 
-//public enum KitchenLightMode
-//{
-//    Full,
-//    Auto,
-//}
-
-//public enum BedroomLightMode
-//{
-//    Off,
-//    Dim,
-//    Full,
-//}
 
 public struct State
 {
     // config
     public TimeOnly WakeUpTime = new TimeOnly(7, 0);
     public TimeSpan WakeUpPeriod = TimeSpan.FromMinutes(10d);
+
+
+    // dynamically calculated values
+    public SunState? SunState = null;
+    public RoomLightEstimate? LivingRoomLightEstimate = null;
+
+
 
 
 
