@@ -61,7 +61,7 @@ public class RoomLightEstimator : IRoomLightEstimator
 
     public static RoomLightEstimate EstimateRoomLight(SunState sunState, RoomLightConfig config)
     {
-        var sunElevationRad = sunState.AltDeg.Deg2Rad(); // -90..+90, realisticly -45..+45 at my location
+        var sunElevationRad = sunState.AltDeg.Deg2Rad(); // [-90..+90], realisticly -45..+45 at my location
         var sunDirectionRad = sunState.DirDeg.Deg2Rad(); // [0..360), 0=north
         var windowDirectionRad = config.WindowDirection; // magnetic direction, 0=north
 
@@ -72,12 +72,11 @@ public class RoomLightEstimator : IRoomLightEstimator
         var diffuseLightFactor = EstimateDiffuseLightFactor(sunState.AltDeg);
         var totalLightFactor = (directLightFactor + diffuseLightFactor).Clamp(0.0, 1.0);
 
-        var solarIrradiance = 1000.0; // W/m^2
-
-        var roomIrradiance = totalLightFactor * solarIrradiance * config.WindowArea * config.WindowTransmission; // W/m^2
-
+        const double solarIrradiance = 1000.0; // W/m^2
         const double luxPerWatt = 120.0; // approx for sunlight
-        var illuminance = roomIrradiance * luxPerWatt; // lx
+
+        var irradiance = totalLightFactor * solarIrradiance * config.WindowArea * config.WindowTransmission; // W/m^2
+        var illuminance = irradiance * luxPerWatt; // lx
 
         return new RoomLightEstimate(
             AlphaRad: alphaRad,
@@ -85,7 +84,7 @@ public class RoomLightEstimator : IRoomLightEstimator
             DirectLightFactor: directLightFactor,
             DiffuseLightFactor: diffuseLightFactor,
             TotalLightFactor: totalLightFactor,
-            Irradiance: roomIrradiance,
+            Irradiance: irradiance,
             Illuminance: illuminance
             );
     }
@@ -106,12 +105,12 @@ public class RoomLightEstimator : IRoomLightEstimator
 
             return t * maxDiffuseFactor1;
         }
-        else
+        else // >0
         {
-            var t = Math.Min(1.0, sunAltDeg / 30.0);              // bis 30° Sonnenhöhe linear aufbauen
+            var t = Math.Min(1.0, sunAltDeg / 30.0); // linear increase 0..1 at 0º..30º
             Debug.Assert(0.0 <= t && t <= 1.0);
 
-            return maxDiffuseFactor1 + t * maxDiffuseFactor2;       // geht langsam von 0.3 → 0.5
+            return maxDiffuseFactor1 + t * maxDiffuseFactor2; // 0.1..0.4
         }
     }
 }
