@@ -53,7 +53,7 @@ public struct State
 {
     // config
     public TimeOnly WakeUpTime = new TimeOnly(7, 0);
-    public TimeSpan WakeUpPeriod = TimeSpan.FromMinutes(10d);
+    public TimeSpan WakeUpPeriod = TimeSpan.FromMinutes(20d);
 
 
     // dynamically calculated values
