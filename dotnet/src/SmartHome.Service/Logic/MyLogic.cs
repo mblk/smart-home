@@ -501,7 +501,7 @@ public class MyLogic : IAsyncDisposable
             await devices.LivingRoom.Standing.TurnOff();
         }
 
-        if (state.LitterBoxIsDirty)
+        if (state.LitterBoxIsDirty && state.MasterMode == MasterMode.Awake)
         {
             await devices.LivingRoom.TvLight.TurnOn(brightness: 0.5, color: (0.66, 0.34));
         }
