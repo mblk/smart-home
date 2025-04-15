@@ -45,9 +45,11 @@ mkdir -p "$SYSTEMD_USER_DIR"
 tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=Remote Audio Player Service
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
+ExecStartPre=/bin/sleep 10
 ExecStart=$PYTHON $PROJECT_DIR/main.py
 WorkingDirectory=$PROJECT_DIR
 Restart=on-failure
