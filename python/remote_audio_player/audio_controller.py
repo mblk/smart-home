@@ -40,3 +40,22 @@ class AudioController:
                 self.process = None
         else:
             print("ℹ️ Keine Wiedergabe aktiv.")
+
+    def setVolume(self, volume):
+        if volume < 0 or volume > 100:
+            print(f"[Fehler] Lautstärke muss zwischen 0 und 100 liegen: {volume}")
+            return
+        try:
+            subprocess.run(["amixer", "set", "Master", f"{volume}%"])
+            print(f"🔊 Lautstärke auf {volume}% gesetzt.")
+        except Exception as e:
+            print(f"[Fehler] Lautstärke konnte nicht gesetzt werden: {e}")
+
+    def speak(self, text):
+        # use pico2wave
+        try:
+            print(f"🗣️ Spreche: {text}")
+            subprocess.run(["pico2wave", "-l", "de-DE", "-w", "/tmp/speech.wav", text])
+            self.play("/tmp/speech.wav")
+        except Exception as e:
+            print(f"[Fehler] Sprachsynthese fehlgeschlagen: {e}")

@@ -29,8 +29,23 @@ class MqttAudioClient:
             if command.startswith("play "):
                 audio_file = command[5:].strip()
                 self.audio_controller.play(audio_file)
+
             elif command == "stop":
                 self.audio_controller.stop()
+
+            elif command.startswith("volume "):
+                level = command[7:].strip()
+                if level.isdigit():
+                    volume = int(level)
+                    if 0 <= volume <= 100:
+                        self.audio_controller.setVolume(volume)
+                    else:
+                        print(f"[Fehler] Lautstärke muss zwischen 0 und 100 liegen: {volume}")
+
+            elif command.startswith("speak "):
+                text = command[6:].strip()
+                self.audio_controller.speak(text)
+
             else:
                 print(f"[Warnung] Unbekanntes Kommando: '{command}'")
         except Exception as e:
