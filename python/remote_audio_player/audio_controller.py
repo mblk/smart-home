@@ -7,16 +7,26 @@ class AudioController:
     def __init__(self):
         self.process = None
 
-    def play(self, filepath):
+    def play(self, source):
         self.stop()
-        if not os.path.isfile(filepath):
-            print(f"[Fehler] Datei nicht gefunden: {filepath}")
-            return
-        try:
-            print(f"🎵 Starte aplay mit Datei: {filepath}")
-            self.process = subprocess.Popen(["aplay", filepath])
-        except Exception as e:
-            print(f"[Fehler] aplay konnte nicht gestartet werden: {e}")
+
+        if source.startswith("http://") or source.startswith("https://"):
+            # Internet-Stream → verwende mpg123
+            try:
+                print(f"🌐 Starte Stream mit mpg123: {source}")
+                self.process = subprocess.Popen(["mpg123", source])
+            except Exception as e:
+                print(f"[Fehler] mpg123 konnte nicht gestartet werden: {e}")
+        else:
+            # Lokale Datei → verwende aplay
+            if not os.path.isfile(source):
+                print(f"[Fehler] Datei nicht gefunden: {source}")
+                return
+            try:
+                print(f"🎵 Starte aplay mit Datei: {source}")
+                self.process = subprocess.Popen(["aplay", source])
+            except Exception as e:
+                print(f"[Fehler] aplay konnte nicht gestartet werden: {e}")
 
     def stop(self):
         if self.process is not None:
