@@ -26,12 +26,19 @@ class MqttAudioClient:
             command = msg.payload.decode()
             print(f"📥 Befehl empfangen: {command}")
 
-            if command.startswith("play "):
-                audio_file = command[5:].strip()
-                self.audio_controller.play(audio_file)
+            if command.startswith("play_radio "):
+                radio_url = command[11:].strip()
+                self.audio_controller.play_radio(radio_url)
 
-            elif command == "stop":
-                self.audio_controller.stop()
+            elif command == "stop_radio":
+                self.audio_controller.stop_radio()
+
+            elif command.startswith("speak "):
+                text = command[6:].strip()
+                self.audio_controller.speak(text)
+
+            elif command == "stop_tts":
+                self.audio_controller.stop_tts()
 
             elif command.startswith("volume "):
                 level = command[7:].strip()
@@ -41,10 +48,6 @@ class MqttAudioClient:
                         self.audio_controller.setVolume(volume)
                     else:
                         print(f"[Fehler] Lautstärke muss zwischen 0 und 100 liegen: {volume}")
-
-            elif command.startswith("speak "):
-                text = command[6:].strip()
-                self.audio_controller.speak(text)
 
             else:
                 print(f"[Warnung] Unbekanntes Kommando: '{command}'")
