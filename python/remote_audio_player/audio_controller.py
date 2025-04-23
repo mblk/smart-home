@@ -10,6 +10,56 @@ class AudioController:
         self.radio_sink = "RadioSink"
         self.tts_sink = "TTSSink"
 
+        self.setup_audio_sinks()
+
+    def setup_audio_sinks(self):
+        try:
+            existing_sinks = subprocess.check_output(["pactl", "list", "sinks", "short"]).decode()
+            existing_modules = subprocess.check_output(["pactl", "list", "modules", "short"]).decode()
+            
+            # Prüfe, ob RadioSink existiert
+            if self.radio_sink not in existing_sinks:
+                subprocess.run(
+                    ["pactl", "load-module", "module-null-sink", f"sink_name={self.radio_sink}", "sink_properties=device.description=RadioSink"],
+                    check=True
+                )
+                print(f"✅ Virtueller Sink '{self.radio_sink}' erstellt.")
+            else:
+                print(f"ℹ️ Virtueller Sink '{self.radio_sink}' existiert bereits.")
+
+            # Prüfe, ob TTSSink existiert
+            if self.tts_sink not in existing_sinks:
+                subprocess.run(
+                    ["pactl", "load-module", "module-null-sink", f"sink_name={self.tts_sink}", "sink_properties=device.description=TTSSink"],
+                    check=True
+                )
+                print(f"✅ Virtueller Sink '{self.tts_sink}' erstellt.")
+            else:
+                print(f"ℹ️ Virtueller Sink '{self.tts_sink}' existiert bereits.")
+
+            # Prüfe, ob Loopback für RadioSink existiert
+            if f"source={self.radio_sink}.monitor" not in existing_modules:
+                subprocess.run(
+                    ["pactl", "load-module", "module-loopback", f"sink={self.output_device}", f"source={self.radio_sink}.monitor"],
+                    check=True
+                )
+                print(f"✅ Loopback für '{self.radio_sink}' erstellt.")
+            else:
+                print(f"ℹ️ Loopback für '{self.radio_sink}' existiert bereits.")
+
+            # Prüfe, ob Loopback für TTSSink existiert
+            if f"source={self.tts_sink}.monitor" not in existing_modules:
+                subprocess.run(
+                    ["pactl", "load-module", "module-loopback", f"sink={self.output_device}", f"source={self.tts_sink}.monitor"],
+                    check=True
+                )
+                print(f"✅ Loopback für '{self.tts_sink}' erstellt.")
+            else:
+                print(f"ℹ️ Loopback für '{self.tts_sink}' existiert bereits.")
+
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Fehler beim Einrichten der Audio-Sinks: {e}")
+
     def play_radio(self, source):
         self.stop_radio()
 
