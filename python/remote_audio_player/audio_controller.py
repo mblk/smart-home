@@ -93,7 +93,7 @@ class AudioController:
             subprocess.run(["pico2wave", "-l", "de-DE", "-w", "/tmp/speech.wav", text])
 
             # Reduziere Radio-Lautstärke während TTS
-            self.set_sink_volume(self.radio_sink, 30)  # Temporär auf 30% reduzieren
+            self.set_sink_volume(self.radio_sink, 50)  # Temporär auf 50% reduzieren
 
             env = os.environ.copy()
             env["PULSE_SINK"] = self.tts_sink  # Route Audio zu TTSSink
