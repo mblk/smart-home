@@ -16,15 +16,15 @@ class MqttAudioClient:
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            print(f"✅ Erfolgreich mit MQTT-Broker verbunden ({self.broker}:{self.port})")
+            print(f"✅ Successfully connected to MQTT broker ({self.broker}:{self.port})")
             self.client.subscribe(self.topic)
         else:
-            print(f"[Fehler] MQTT-Verbindung fehlgeschlagen mit Code {rc}")
+            print(f"[Error] MQTT connection failed with code {rc}")
 
     def on_message(self, client, userdata, msg):
         try:
             command = msg.payload.decode()
-            print(f"📥 Befehl empfangen: {command}")
+            print(f"📥 Command received: {command}")
 
             if command.startswith("play_radio "):
                 radio_url = command[11:].strip()
@@ -44,29 +44,29 @@ class MqttAudioClient:
                     if 0 <= volume <= 100:
                         self.audio_controller.set_master_volume(volume)
                     else:
-                        print(f"[Fehler] Lautstärke muss zwischen 0 und 100 liegen: {volume}")
+                        print(f"[Error] Volume must be between 0 and 100: {volume}")
 
             else:
-                print(f"[Warnung] Unbekanntes Kommando: '{command}'")
+                print(f"[Warning] Unknown command: '{command}'")
         except Exception as e:
-            print(f"[Fehler] Fehler bei Verarbeitung der Nachricht: {e}")
+            print(f"[Error] Error processing message: {e}")
 
     def start(self):
         try:
-            print(f"🔌 Verbinde mit MQTT-Broker: {self.broker}:{self.port} ...")
+            print(f"🔌 Connecting to MQTT broker: {self.broker}:{self.port} ...")
             self.client.connect(self.broker, self.port, 60)
         except socket.gaierror:
-            print(f"[Fehler] Ungültiger Hostname oder Netzwerkfehler: {self.broker}")
+            print(f"[Error] Invalid hostname or network error: {self.broker}")
             return
         except Exception as e:
-            print(f"[Fehler] Verbindungsversuch fehlgeschlagen: {e}")
+            print(f"[Error] Connection attempt failed: {e}")
             return
 
         try:
             self.client.loop_forever()
         except KeyboardInterrupt:
-            print("⛔️ Beende Skript durch Tastendruck...")
+            print("⛔️ Script terminated by keyboard interrupt...")
         except Exception as e:
-            print(f"[Fehler] Unerwarteter Fehler im MQTT-Loop: {e}")
+            print(f"[Error] Unexpected error in MQTT loop: {e}")
         finally:
             self.audio_controller.stop()

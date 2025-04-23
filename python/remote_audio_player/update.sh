@@ -7,11 +7,11 @@ USER_HOME=$(eval echo "~$USER_NAME")
 SERVICE_NAME="remote_audio_player"
 PROJECT_DIR="$USER_HOME/inst/$SERVICE_NAME"
 
-echo "🔁 Aktualisiere Projektdateien im $PROJECT_DIR"
+echo "🔁 Updating project files in $PROJECT_DIR"
 cp main.py audio_controller.py mqtt_client.py "$PROJECT_DIR/"
 
-echo "🔄 Starte den Service neu, um Änderungen zu übernehmen"
+echo "🔄 Restarting the service to apply changes"
 systemctl --user restart "$SERVICE_NAME"
 
-echo "✅ Update abgeschlossen!"
-echo "ℹ️ .env und virtuelle Umgebung wurden nicht verändert."
+echo "✅ Update completed!"
+echo "ℹ️ .env and virtual environment were not modified."

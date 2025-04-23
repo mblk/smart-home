@@ -14,17 +14,17 @@ VENV_DIR="$PROJECT_DIR/venv"
 PYTHON="$VENV_DIR/bin/python"
 
 if ! systemctl --user is-active default.target &>/dev/null; then
-    echo "⚠️  systemd --user scheint nicht aktiv zu sein. Starte Script innerhalb einer User-Sitzung."
+    echo "⚠️  systemd --user does not seem to be active. Run this script within a user session."
     exit 1
 fi
 
-echo "📁 Erstelle Zielverzeichnis: $PROJECT_DIR"
+echo "📁 Creating target directory: $PROJECT_DIR"
 mkdir -p "$PROJECT_DIR"
 
-echo "📄 Kopiere Projektdateien nach $PROJECT_DIR"
+echo "📄 Copying project files to $PROJECT_DIR"
 cp main.py audio_controller.py mqtt_client.py "$PROJECT_DIR/"
 
-echo "🧪 Erstelle Beispiel-.env-Datei (falls nicht vorhanden)"
+echo "🧪 Creating example .env file (if not already present)"
 if [ ! -f "$PROJECT_DIR/.env" ]; then
 tee "$PROJECT_DIR/.env" > /dev/null <<EOF
 MQTT_BROKER=localhost
@@ -34,14 +34,14 @@ OUTPUT_DEVICE=default
 EOF
 fi
 
-echo "🐍 Erstelle virtuelle Umgebung"
+echo "🐍 Creating virtual environment"
 python3 -m venv "$VENV_DIR"
 
-echo "📦 Installiere Python-Abhängigkeiten"
+echo "📦 Installing Python dependencies"
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install paho-mqtt python-dotenv
 
-echo "📝 Erstelle systemd-Service-Datei"
+echo "📝 Creating systemd service file"
 mkdir -p "$SYSTEMD_USER_DIR"
 tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
@@ -60,13 +60,13 @@ Environment=PYTHONUNBUFFERED=1
 WantedBy=default.target
 EOF
 
-echo "🔄 Lade systemd neu und aktiviere Service"
+echo "🔄 Reloading systemd and enabling service"
 
 systemctl --user daemon-reload
 systemctl --user enable "$SERVICE_NAME"
 systemctl --user restart "$SERVICE_NAME"
 
-echo "✅ Installation abgeschlossen!"
-echo "👉 Service-Status prüfen mit: systemctl --user status $SERVICE_NAME"
-echo "📄 Konfiguration ändern: $PROJECT_DIR/.env"
-echo "🔍 Logs anzeigen: journalctl --user -u $SERVICE_NAME -f"
+echo "✅ Installation completed!"
+echo "👉 Check service status with: systemctl --user status $SERVICE_NAME"
+echo "📄 Modify configuration: $PROJECT_DIR/.env"
+echo "🔍 View logs: journalctl --user -u $SERVICE_NAME -f"

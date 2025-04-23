@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from audio_controller import AudioController
 from mqtt_client import MqttAudioClient
 
-# .env laden
+# Load .env file
 load_dotenv()
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
