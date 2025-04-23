@@ -4,13 +4,12 @@ import subprocess
 import os
 
 class AudioController:
-    def __init__(self):
+    def __init__(self, output_device):
         self.radio_process = None
         self.tts_process = None
         self.radio_sink = "RadioSink"
         self.tts_sink = "TTSSink"
-
-        self.setup_audio_sinks()
+        self.output_device = output_device
 
     def setup_audio_sinks(self):
         try:
