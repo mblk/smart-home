@@ -31,3 +31,11 @@ docker save -o smarthome.service.tar smarthome.service:latest
 scp .\smarthome.service.tar smarthome@media:/home/smarthome
 ssh smarthome@media "docker load -i smarthome.service.tar"
 ...
+
+
+
+##
+## internet radios
+##
+
+http://stream.radioparadise.com/mp3-192

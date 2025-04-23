@@ -92,6 +92,9 @@ public class MyLogic : IAsyncDisposable
         devices.Kitchen.OccupancySensor1.Event += (_, e)
             => eventQueue.Add(new OccupancySensorEvent("kitchen", e.Occupancy));
 
+        devices.Virtual.MasterMode.ChangeRequest += x
+            => { if (x != null) { eventQueue.Add(new ChangeMasterMode(x.Value)); } };
+
         devices.Virtual.LivingRoomLightMode.ChangeRequest += x
             => { if (x != null) { eventQueue.Add(new ChangeLivingRoomLightMode(x.Value)); } };
         devices.Virtual.KitchenLightMode.ChangeRequest += x
@@ -130,13 +133,6 @@ public class MyLogic : IAsyncDisposable
             influxService.WriteSensorData("livingroom/light_estimator", values);
         };
 
-        devices.Virtual.MasterMode.ChangeRequest += x =>
-        {
-            Console.WriteLine($"MasterMode ChangeRequest {x}");
-
-            if (x != null) eventQueue.Add(new ChangeMasterMode(x.Value));
-        };
-
         devices.Virtual.Sensor.DataReceived += (_, s) =>
         {
             influxService.WriteSensorData(s.DeviceId, s.Values);
@@ -162,6 +158,10 @@ public class MyLogic : IAsyncDisposable
     {
         var state = CreateState();
 
+        state.OutputEvents.Enqueue(new SetVolumeEvent(0.5));
+        state.OutputEvents.Enqueue(new StopRadioEvent());
+        state.OutputEvents.Enqueue(new SpeakEvent("Hallo Welt. 5, 4, 3, 2, 1, 0. System gestartet. Hahahaha."));
+
         // Propagate the initial state.
         await ProcessChangedState(state, devices);
 
@@ -182,6 +182,12 @@ public class MyLogic : IAsyncDisposable
                             oldState.PrintDiffTo(newState, "state");
                             state = newState;
                             await ProcessChangedState(state, devices);
+                        }
+
+                        if (newState.OutputEvents.Count > 0)
+                        {
+                            await ProcessOutputEvents(state.OutputEvents, devices);
+                            state.OutputEvents.Clear();
                         }
 
                         if (@event is not TimerTickEvent)
@@ -274,6 +280,8 @@ public class MyLogic : IAsyncDisposable
 
     private static State ChangeMasterMode(State state, MasterMode newMode)
     {
+        var oldMode = state.MasterMode;
+
         state.MasterMode = newMode;
 
         if (newMode == MasterMode.WakingUp)
@@ -288,6 +296,39 @@ public class MyLogic : IAsyncDisposable
         state.LivingRoomLightMode = LightMode.Auto;
         state.KitchenLightMode = LightMode.Auto;
         state.BedroomLightMode = LightMode.Auto;
+
+        switch (newMode)
+        {
+            case MasterMode.Awake:
+                state.OutputEvents.Enqueue(new SpeakEvent("Neuer Modus: Zuhause und wach"));
+                break;
+
+            case MasterMode.GoingToBed:
+                state.OutputEvents.Enqueue(new SpeakEvent("Neuer Modus: Gehe ins Bett"));
+                break;
+
+            case MasterMode.Sleeping:
+                state.OutputEvents.Enqueue(new SpeakEvent("Neuer Modus: Schlafe"));
+                break;
+
+            case MasterMode.WakingUp:
+                state.OutputEvents.Enqueue(new SpeakEvent("Neuer Modus: Wache auf"));
+                break;
+
+            case MasterMode.Away:
+                state.OutputEvents.Enqueue(new SpeakEvent("Neuer Modus: Abwesend"));
+                break;
+        }
+
+        if (oldMode != MasterMode.WakingUp && newMode == MasterMode.WakingUp)
+        {
+            state.OutputEvents.Enqueue(new PlayRadioEvent("http://stream.radioparadise.com/mp3-192"));
+        }
+
+        if (oldMode == MasterMode.WakingUp && newMode != MasterMode.WakingUp)
+        {
+            state.OutputEvents.Enqueue(new StopRadioEvent());
+        }
 
         return state;
     }
@@ -373,6 +414,12 @@ public class MyLogic : IAsyncDisposable
                                 state = ChangeMasterMode(state, MasterMode.Awake);
                             }
                             break;
+
+                        case "button_4_single":
+                            // XXX
+                            state.OutputEvents.Enqueue(new SpeakEvent("Hallo. Test. 1 2 3 4 5. Bis dann. Ende."));
+                            // XXX
+                            break;
                     }
                 }
 
@@ -443,7 +490,45 @@ public class MyLogic : IAsyncDisposable
 
         await UpdateLivingRoomLights(state, devices);
         await UpdateKitchenLights(state, devices);
-        await UpdateBedroomLights(state, devices);
+        await UpdateBedroomLights(state, devices);   
+    }
+
+    private static async Task ProcessOutputEvents(IEnumerable<OutputEvent> outputEvents, Devices devices)
+    {
+        foreach (var outputEvent in outputEvents)
+        {
+            Console.WriteLine($"Output event: {outputEvent}");
+
+            try
+            {
+                switch (outputEvent)
+                {
+                    case SpeakEvent speakEvent:
+                        await devices.Virtual.RemoteAudioPlayer.Speak(speakEvent.Text);
+                        break;
+
+                    case PlayRadioEvent playRadioEvent:
+                        await devices.Virtual.RemoteAudioPlayer.PlayRadio(playRadioEvent.Uri);
+                        break;
+
+                    case StopRadioEvent stopRadioEvent:
+                        await devices.Virtual.RemoteAudioPlayer.StopRadio();
+                        break;
+
+                    case SetVolumeEvent setVolumeEvent:
+                        await devices.Virtual.RemoteAudioPlayer.SetVolume(setVolumeEvent.Volume);
+                        break;
+
+                    default:
+                        Console.WriteLine($"Unknown output event: {outputEvent} ({outputEvent.GetType().Name})");
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to process output event {outputEvent}: {e}");
+            }
+        }
     }
 
     private static double CalculateLivingRoomAutoLightLevel(State state)

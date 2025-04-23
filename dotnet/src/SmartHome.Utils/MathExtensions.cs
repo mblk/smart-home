@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Numerics;
 
 namespace SmartHome.Utils;
 
@@ -22,6 +23,25 @@ public static class MathExtensions
         if (value > max) return max;
         return value;
     }
+
+    public static int Clamp(this int value, int min, int max)
+    {
+        Debug.Assert(min < max);
+
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    //public static T Clamp<T>(this T value, T min, T max)
+    //    where T : INumber<T>
+    //{
+    //    Debug.Assert(min < max);
+
+    //    if (value < min) return min;
+    //    if (value > max) return max;
+    //    return value;
+    //}
 
     public static double Normalize(this double value, double min, double max)
     {

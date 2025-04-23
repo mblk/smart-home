@@ -13,4 +13,8 @@
     <PackageReference Include="MQTTnet" Version="5.0.1.1416" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SmartHome.Utils\SmartHome.Utils.csproj" />
+  </ItemGroup>
+
 </Project>

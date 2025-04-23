@@ -2,6 +2,8 @@ using SmartHome.Infrastructure.Devices;
 
 namespace SmartHome.Service.Logic;
 
+// incoming events
+
 public abstract record LogicEvent;
 
 public record TimerTickEvent : LogicEvent;
@@ -18,3 +20,12 @@ public record ChangeBedroomLightMode(LightMode Mode) : LogicEvent;
 
 public record SunStateChangedEvent(SunState SunState) : LogicEvent;
 public record RoomLightEstimateChangedEvent(RoomLightEstimate Estimate) : LogicEvent;
+
+// outgoing events
+
+public abstract record OutputEvent;
+
+public record SpeakEvent(string Text) : OutputEvent;
+public record PlayRadioEvent(string Uri) : OutputEvent;
+public record StopRadioEvent() : OutputEvent;
+public record SetVolumeEvent(double Volume) : OutputEvent;

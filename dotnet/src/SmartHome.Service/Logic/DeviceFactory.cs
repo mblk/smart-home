@@ -1,6 +1,7 @@
 using SmartHome.Infrastructure.CatScale;
 using SmartHome.Infrastructure.Devices;
 using SmartHome.Infrastructure.Mqtt.Connector;
+using SmartHome.Infrastructure.Mqtt.Devices;
 using SmartHome.Infrastructure.Mqtt.SharedState;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Discovery;
@@ -36,6 +37,8 @@ public static class DeviceFactory
                 BedroomLightMode = new MqttSharedState<LightMode>(mqttConnector, "state", "bedroom"),
 
                 Sensor = new Z2MSensor(mqttConnector),
+
+                RemoteAudioPlayer = new RemoteAudioPlayer(mqttConnector),
             },
 
             LivingRoom = new LivingRoomDevices

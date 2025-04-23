@@ -86,6 +86,13 @@ public struct State
     public required LightMode KitchenLightMode;
     public required LightMode BedroomLightMode;
 
+
+    //xxxx
+    public readonly Queue<OutputEvent> OutputEvents = [];
+    //xxxx
+
+
+
     public State()
     {
     }

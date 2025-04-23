@@ -1,5 +1,7 @@
 using SmartHome.Infrastructure.CatScale;
 using SmartHome.Infrastructure.Devices;
+using SmartHome.Infrastructure.Mqtt.Connector;
+using SmartHome.Infrastructure.Mqtt.Devices;
 using SmartHome.Infrastructure.Mqtt.SharedState;
 using SmartHome.Infrastructure.Zigbee2Mqtt.Devices;
 
@@ -25,7 +27,9 @@ public class VirtualDevices
     public required IMqttSharedState<LightMode> KitchenLightMode;
     public required IMqttSharedState<LightMode> BedroomLightMode;
 
-    public required Z2MSensor Sensor;
+    public required Z2MSensor Sensor; // TODO interface?
+
+    public required IRemoteAudioPlayer RemoteAudioPlayer;
 }
 
 public class LivingRoomDevices

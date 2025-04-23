@@ -60,6 +60,6 @@ public static class ObjectExtensions
         if (v1 is null && v2 is null) return true;
         if (v1 is null && v2 is not null) return false;
         if (v1 is not null && v2 is null) return false;
-        return v1.Equals(v2);
+        return v1!.Equals(v2);
     }
 }
