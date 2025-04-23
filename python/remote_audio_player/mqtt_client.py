@@ -37,15 +37,12 @@ class MqttAudioClient:
                 text = command[6:].strip()
                 self.audio_controller.speak(text)
 
-            elif command == "stop_tts":
-                self.audio_controller.stop_tts()
-
             elif command.startswith("volume "):
                 level = command[7:].strip()
                 if level.isdigit():
                     volume = int(level)
                     if 0 <= volume <= 100:
-                        self.audio_controller.setVolume(volume)
+                        self.audio_controller.set_master_volume(volume)
                     else:
                         print(f"[Fehler] Lautstärke muss zwischen 0 und 100 liegen: {volume}")
 

@@ -30,6 +30,7 @@ tee "$PROJECT_DIR/.env" > /dev/null <<EOF
 MQTT_BROKER=localhost
 MQTT_PORT=1883
 MQTT_TOPIC=audio/control
+OUTPUT_DEVICE=default
 EOF
 fi
 

@@ -22,7 +22,8 @@ print(f"Output Device: {OUTPUT_DEVICE}")
 if __name__ == "__main__":
     controller = AudioController(output_device=OUTPUT_DEVICE)
     controller.setup_audio_sinks()
-    
+    controller.set_default_volumes()
+
     mqtt_client = MqttAudioClient(
         broker=MQTT_BROKER,
         port=MQTT_PORT,
